@@ -1,0 +1,441 @@
+---
+title: "ANOVA Ridgeplots g0 vs g8 GFP distributions"
+output: html_notebook
+---
+
+My goal is to figure out whether the GFP distribution of gen8 populations differ significantly from that of stock strains ie. gen0 populations. The populations can have four genotypes: Wildtype GAP1 architecture, LTR KO, ARS KO, or LTR + ARS KO.
+
+Note that here we are using data collected from stock strains from the freezer. not the true g0 populations. 
+I will get flow data from the true g0 populations that we froze. 
+
+Instead of ANOVA, I can do t-test between g0 and g8 of each genotype. I'm interested in whether there is a difference between g8 and g0.
+so 4 t-tests in total because I have 4 genotypes.
+check whether the GFP distribution is normal - use Shapiro Wilk test. 
+If not normal, use Mann-Whitney. 
+
+Additionally, I could do ANOVA between all 8 groups. Null hypothesis they are all part of the same distribution. Will it be able to detect whether ONE group is distinct? Hmm ..
+I have 4 groups in g0 vs the same 4 groups in g8. 8 groups comparison... or 4 pair-wise comparisons. 
+
+Load packages
+```{r}
+library(tidyverse)
+library(ggridges)
+library(CytoExploreR)
+```
+
+
+Set working directory as a new folder - not the folder the .Rmd file sits in. Personal preference. 
+```{r setup}
+require("knitr")
+opts_knit$set(root.dir = "/Volumes/GoogleDrive/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/analysis/gen0_vs_gen8")
+```
+
+
+```{r}
+getwd()
+```
+
+##### Ridgeplots of Stock Strains
+
+
+###### Draw histograms of the stock strains (g0) to see if CNVs appeared at gen8 or not
+
+Get folder with flow data (FCS files) of stock strains which represents generation 0
+```{r}
+stock_folder_path = "/Volumes/GoogleDrive/My Drive/greshamlab/Molecular Determinants of CNV Evolution Dynamics/Summer 2021 Group LTEE/mCitrine CNV reporter test"
+
+g0_files = list.files(paste0(stock_folder_path,"/FCS_files"))
+```
+
+If first time, this might help t
+```{r}
+#files_pos <- match(sample_sheet$name, g0_files) #find positions of files that match the sample_sheet names
+#g0_files[files_pos] #subset of files to read in
+```
+
+```{r}
+sample_sheet = read_csv(file = paste0(stock_folder_path,"/sample_sheet.csv"))
+sample_sheet = sample_sheet %>%
+  mutate(name = paste0(name, ".fcs"))
+```
+
+Use CytoexploreR to read in FCS files as a gating set
+```{r}
+stocks_gs <- cyto_setup(path = paste0(stock_folder_path,"/FCS_files"), restrict = T, details = F) #must specify a folder, all fcs files will be read
+```
+
+Fill the experiment details for the gating set with sample sheet 
+```{r}
+for(i in 1:length(names(sample_sheet))){
+  flowWorkspace::pData(stocks_gs)[names(sample_sheet[i])]<-sample_sheet[i]
+}
+#view to see if attached
+cyto_details(stocks_gs) %>% View()
+```
+
+transform stock strain gating set
+```{r}
+GFP_trans <- cyto_transformer_logicle(stocks_gs,
+                                      channels = c("B2-A"),
+                                      widthBasis = -100
+)#returns it as a list
+FSC_SSC_trans <- cyto_transformer_log(stocks_gs,
+                                      channels = c("FSC-A", "FSC-H", "SSC-A", "SSC-H")
+)
+combined_trans <- cyto_transformer_combine(GFP_trans,FSC_SSC_trans)
+transformed_timepoint_gating_set <- cyto_transform(stocks_gs,
+                                                   trans = combined_trans)
+
+#apply gating template to stock strain gating set
+cyto_gatingTemplate_apply(transformed_timepoint_gating_set, gatingTemplate= "cytek_gating_01_02_04_v2.csv")
+```
+
+
+```{r}
+sc_distributions <- read_csv("sc_distributions_stockStrains.csv")
+
+
+#do once - get raw single cell flow data of stock strains
+timepoint_raw_list <- cyto_extract(transformed_timepoint_gating_set, parent = "Single_cells", raw = T, channels = c("FSC-A", "B2-A")) #raw flow data of each single cell as a list of matrices
+
+sc_distributions <- map_df(timepoint_raw_list, ~as.data.frame(.x), .id="name") %>% #convert to df, put list name in new column
+  mutate(name = as.factor(name), #convert `name` to factor
+         B2A_FSC = `B2-A`/`FSC-A`
+         ) %>% #compute normalized GFP over forward scatter
+  left_join(sample_sheet) #join by name column to add other metadata to raw data
+
+#do once - output the file if first time
+#write_csv(sc_distributions, "sc_distributions_stockStrains.csv")
+```
+
+
+
+#### Plot ridgeplots of gen0 strains
+```{r message=FALSE, error=FALSE}
+,
+g0_plot = sc_distributions %>%
+  dplyr::filter(Strain %in% c("DGY1657","DGY2071","DGY1","DGY2150","DGY1315")) %>%
+  mutate(Strain = fct_reorder(Strain, desc(B2A_FSC))) %>% #reorder samples by y values low to high
+  ggplot(aes(x = B2A_FSC, y = Strain, fill = `mCitrine copy number`)) +
+  geom_density_ridges(scale=1.0, quantile_lines = F, quantiles = 2) +
+  xlab("B2-A mCitrine fluorescence/forward scatter") +
+  ylab("Strain") +
+  ggtitle("Generation 0 ridgeplots") +
+  theme_minimal() +
+  scale_x_continuous(limits=c(0,3))+
+  scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
+  scale_fill_manual(values= c(RColorBrewer::brewer.pal(3, "Greens")), breaks=c("zero copy","one copy","two copy")) + #breaks= change order of legend items
+  theme(axis.text.x = element_text(family="Arial", size = 10, color = "black"),
+        axis.text.y = element_text(family="Arial", size = 10, color = "black"),
+  )
+g0_plot
+# Save plot
+#ggsave("g0_B2A_ridgeplot_071822.png",bg='#ffffff')
+```
+
+
+
+Analysis of Generation 8 data
+#Generation 8 Ridgeplots
+```{r}
+g8_sc_distributions <- read_csv("01_02_04_v2_SingleCellDistributions_01_EE_GAP1_ArchMuts_2021.csv")
+
+g8_sc_distributions = g8_sc_distributions %>% mutate(
+  generation = factor(generation, levels = unique(g8_sc_distributions$generation)),
+  sample = factor(sample, levels = unique(rev(c("ctrl0",
+                                                "ctrl1",
+                                                "ctrl2",
+                                                "gap1_1",
+                                                "gap1_2",
+                                                "gap1_3",
+                                                "gap1_4",
+                                                "gap1_5",
+                                                "gap1_ltr_1",
+                                                "gap1_ltr_2",
+                                                "gap1_ltr_3",
+                                                "gap1_ltr_4",
+                                                "gap1_ltr_5",
+                                                "gap1_ltr_6",
+                                                "gap1_ltr_7",
+                                                "gap1_ltr_8",
+                                                "gap1_ars_1",
+                                                "gap1_ars_3",
+                                                "gap1_ars_4",
+                                                "gap1_ars_5",
+                                                "gap1_ars_6",
+                                                "gap1_ars_7",
+                                                "gap1_ars_8",
+                                                "gap1_all_1",
+                                                "gap1_all_2",
+                                                "gap1_all_3",
+                                                "gap1_all_4",
+                                                "gap1_all_5",
+                                                "gap1_all_6",
+                                                "gap1_all_7",
+                                                "gap1_all_8"
+  )
+  ))),
+  name = factor(name, levels = unique(rev(c("Experiment_042-Plate_001-Reference Group-B3 Unstained (Cells).fcs",
+                                            "Experiment_042-Plate_001-1 copy control-D3 DGY500.fcs",
+                                            "Experiment_042-Plate_001-Reference Group-F3 DGY1315 mCitrine (Cells).fcs",
+                                            "Experiment_042-Plate_001-Experimental-H3 gap1_1.fcs",
+                                            "Experiment_042-Plate_001-Experimental-G4 gap1_2.fcs",
+                                            "Experiment_042-Plate_001-Experimental-H5 gap1_3.fcs",
+                                            "Experiment_042-Plate_001-Experimental-G6 gap1_4.fcs",
+                                            "Experiment_042-Plate_001-Experimental-H7 gap1_5.fcs",
+                                            "Experiment_042-Plate_001-Experimental-C4 gap1_ltr_1.fcs",
+                                            "Experiment_042-Plate_001-Experimental-D5 gap1_ltr_2.fcs",
+                                            "Experiment_042-Plate_001-Experimental-C6 gap1_ltr_3.fcs",
+                                            "Experiment_042-Plate_001-Experimental-D7 gap1_ltr_4.fcs",
+                                            "Experiment_042-Plate_001-Experimental-C8 gap1_ltr_5.fcs",
+                                            "Experiment_042-Plate_001-Experimental-B9 gap1_ltr_6.fcs",
+                                            "Experiment_042-Plate_001-Experimental-H9 gap1_ltr_7.fcs",
+                                            "Experiment_042-Plate_001-Experimental-E10 gap1_ltr_8.fcs",
+                                            "Experiment_042-Plate_001-Experimental-D9 gap1_ars_6.fcs",
+                                            "Experiment_042-Plate_001-Experimental-E4 gap1_ars_1.fcs",
+                                            "Experiment_042-Plate_001-Experimental-E6 gap1_ars_3.fcs",
+                                            "Experiment_042-Plate_001-Experimental-F7 gap1_ars_4.fcs",
+                                            "Experiment_042-Plate_001-Experimental-E8 gap1_ars_5.fcs",
+                                            "Experiment_042-Plate_001-Experimental-D9 gap1_ars_6.fcs",
+                                            "Experiment_042-Plate_001-Experimental-A10 gap1_ars_7.fcs",
+                                            "Experiment_042-Plate_001-Experimental-G10 gap1_ars_8.fcs",
+                                            "Experiment_042-Plate_001-Experimental-A4 gap1_all_1.fcs",
+                                            "Experiment_042-Plate_001-Experimental-A6 gap1_all_3.fcs",
+                                            "Experiment_042-Plate_001-Experimental-B5 gap1_all_2.fcs",
+                                            "Experiment_042-Plate_001-Experimental-B7 gap1_all_4.fcs",
+                                            "Experiment_042-Plate_001-Experimental-A8 gap1_all_5.fcs",
+                                            "Experiment_042-Plate_001-Experimental-G8 gap1_all_6.fcs",
+                                            "Experiment_042-Plate_001-Experimental-F9 gap1_all_7.fcs",
+                                            "Experiment_042-Plate_001-Experimental-C10 gap1_all_8.fcs"
+  )))))
+
+
+```
+
+
+Plot g8 ridgeplots
+```{r message=FALSE, error=FALSE}
+g8plot = ggplot(g8_sc_distributions, aes(x = B2A_FSC, y = sample, fill = Description)) +
+  geom_density_ridges(scale=1.0, quantile_lines = F, quantiles = 2) +
+  xlab("Normalized fluorescence (a.u.)") +
+  ylab("Sample") +
+  ggtitle("Generation 8") +
+  theme_classic() +
+  scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) + #expands the graph space or else the top is cut off
+  #scale_fill_discrete(breaks=c("0 copy control",
+  #                             "1 copy control",
+  #                             "2 copy control",
+  #                             "GAP1 WT architecture",
+  #                             "GAP1 LTR KO",
+  #                             "GAP1 ARS KO",
+  #                             "GAP1 LTR + ARS KO") #change order of legend items
+  #                   )+
+  scale_fill_manual(values=c(RColorBrewer::brewer.pal(4, "Greens")[-1],"gray","#6699cc","#e26d5c","#DEBD52"),
+                    breaks=c("0 copy control",
+                             "1 copy control",
+                             "2 copy control",
+                             "GAP1 WT architecture",
+                             "GAP1 LTR KO",
+                             "GAP1 ARS KO",
+                             "GAP1 LTR + ARS KO")) +
+  #scale_fill_manual(values=c("#DE54B9", "#5474DE", "#54DE79", "#DEBD52")) +  #c(ARS,LTR+ARS,LTR,WT)+
+  theme(
+    legend.text = element_text(family="Arial", size = 12),#edit legend text font and size
+    legend.title = element_blank(), #remove legend title
+    axis.text.x = element_text(family="Arial", size = 10, color = "black"), #edit x-tick labels
+    axis.text.y = element_text(family="Arial", size = 10, color = "black")
+  )
+
+g8plot
+
+# Save plot
+#ggsave("generation8_ridgeplots_scale1_071822.png",bg='#ffffff' )
+```
+
+
+#### Merge two dataframes
+```{r}
+head(g8_sc_distributions) 
+
+g0_sc_distr = sc_distributions %>%
+  dplyr::filter(Strain %in% c("DGY1657","DGY2071","DGY1","DGY2150","DGY1315")) %>% 
+  mutate(generation = 0,
+        generation = as.factor(generation),
+        sample = Description)
+
+
+g0and8 = bind_rows(g0_sc_distr, g8_sc_distributions) %>% 
+  select(-Genotype) %>% 
+  mutate(#Description = as.factor(Description),
+         `mCitrine copy number` = as.factor(`mCitrine copy number`))
+  
+  
+```
+
+
+Data Cleaning - Search and Replace strings inside `Description` column
+```{r}
+str(g0and8)
+unique(g0and8$Description)
+g0and8["Description"][g0and8["Description"] == "LTR + ARS KO"] <- "GAP1 LTR + ARS KO"
+unique(g0and8$Description)
+g0and8["Description"][g0and8["Description"] == "Wildtype architecture"] <- "GAP1 WT architecture"
+unique(g0and8$Description)
+g0and8["Description"][g0and8["Description"] == "ARS KO"] <- "GAP1 ARS KO"
+unique(g0and8$Description)
+```
+
+
+Generation 0 and 8 ridgeplots
+Edit this graph - so the reorder the samples 0, WT, 2 copy, ... gen 0 plots, then gen8 plots in order: WT, LTR, ARS, LTR+ARS.
+Did we ever freeze down gen 0? Yes PLATE1!!! I should cytek those...make o/n in GLN and CYTEK.  
+Maybe the stock strains were grown in YPD . that could explain why the Fluorescence signal looks different. 
+I want to redo this analysis for the true gen0 populations. vs gen8 populations. 
+```{r fig.height=3, message=FALSE, error=FALSE}
+#g0and8 %>% dplyr::filter(is.na(sample)) %>% View()
+
+g0and8plot = ggplot(g0and8, aes(x = B2A_FSC, y = sample, fill = generation)) +
+  geom_density_ridges(scale=1.5, quantile_lines = F, quantiles = 2) +
+  xlab("Normalized fluorescence (a.u.)") +
+  ylab("Sample") +
+  ggtitle("Generation 0 and 8") +
+  theme_classic() +
+  scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) + #expands the graph space or else the top is cut off
+  #scale_fill_discrete(breaks=c("0 copy control",
+  #                             "1 copy control",
+  #                             "2 copy control",
+  #                             "GAP1 WT architecture",
+  #                             "GAP1 LTR KO",
+  #                             "GAP1 ARS KO",
+  #                             "GAP1 LTR + ARS KO") #change order of legend items
+  #                   )+
+  #scale_fill_manual(values=c(RColorBrewer::brewer.pal(4, "Greens")[-1],"gray","#6699cc","#e26d5c","#DEBD52"),
+  #                  breaks=c("0 copy control",
+  #                           "1 copy control",
+  #                           "2 copy control",
+  #                           "GAP1 WT architecture",
+  #                           "GAP1 LTR KO",
+  #                           "GAP1 ARS KO",
+  #                           "GAP1 LTR + ARS KO")) +
+  #scale_fill_manual(values=c("#DE54B9", "#5474DE", "#54DE79", "#DEBD52")) +  #c(ARS,LTR+ARS,LTR,WT)+
+  theme(
+    legend.text = element_text(family="Arial", size = 12),#edit legend text font and size
+    legend.title = "Generation",
+    axis.text.x = element_text(family="Arial", size = 10, color = "black"), #edit x-tick labels
+    axis.text.y = element_text(family="Arial", size = 10, color = "black")
+  )
+g0and8plot
+#ggsave("g0and8_ridgeplot_071822.png",bg='#ffffff' )
+
+```
+
+
+#### Perform ANOVA 
+or some analysis to detect differences between these 8 groups , or 4 groups across 2 timepoints. 
+We know that the Two Copy Control and One Copy Control are different from each other - and the effect size is small. Could we use that as a control/justification of difference? Say like if the effect size between g0 and g8 is the same as the effect size between the 1copy and 2copy controls?
+
+T-Test on g8 data only
+Test for difference between the one copy control and DGY2071
+Test for difference between the two copy control and DGY2071
+
+We have 31 distinct populations.
+We have 8 populations of the LTR+ARS KO (gap1_all_#)
+
+
+```{r}
+g8_sc_distributions %>% distinct(sample) %>% arrange(sample)
+```
+
+```{r}
+
+anovaGFPperPop= aov(`B2A_FSC`~sample, data = g8_sc_distributions) #runs the model
+summary(anovaGFPperPop) #prints summary of the model
+```
+
+Compare LTR+ARS KO pops to WT Architecture pops
+```{r}
+
+  all_and_wt = g8_sc_distributions %>% 
+  dplyr::filter(Description %in% c("GAP1 LTR + ARS KO", 
+              "GAP1 WT architecture"))
+
+anovAllvsWT= aov(`B2A_FSC`~sample, data = all_and_wt) #runs the model
+summary(anovAllvsWT) #prints summary of the model
+
+anovAllvsWT= aov(`B2A_FSC`~Description, data = all_and_wt) #runs the model
+summary(anovAllvsWT) #prints summary of the model
+
+
+```
+
+Compare gen 8 LTR+ARS KO pop 8  to 2 copy control.
+There is a statistically significant difference in means of gap1_all_7 and ctrl2.
+Tiny difference but significant!
+```{r}
+all_ctr2 = g8_sc_distributions %>% 
+  dplyr::filter(sample %in% c("gap1_all_8", 
+              "ctrl2"))
+am_all8vsCtrl2= aov(`B2A_FSC`~sample, data = all_ctr2) #runs the model
+summary(am_all8vsCtrl2) #prints summary of the model
+
+t.test(`B2A_FSC`~sample, mu = 0, data = all_ctr2, conf.level = 0.95)
+```
+
+Compare gen 8 LTR+ARS KO pop 8 to 1 copy control.
+There is a statistically significant difference in means of gap1_all_7 and ctrl1.
+Tiny difference but significant!
+```{r}
+all8_ctr1 = g8_sc_distributions %>% 
+  dplyr::filter(sample %in% c("gap1_all_8", 
+              "ctrl1"))
+
+
+am_all8_ctr1= aov(`B2A_FSC`~sample, data = all8_ctr1) #runs the model
+summary(am_all8_ctr1) #prints summary of the model
+
+t.test(`B2A_FSC`~sample, mu = 0, data = all8_ctr1, conf.level = 0.95)
+```
+
+
+
+```{r fig.width=8}
+gen8_GFP_boxplot = ggplot(g8_sc_distributions, aes(sample, `B2A_FSC`, fill = Description)) +
+  geom_boxplot(outlier.shape = NA) +
+  ggtitle("Generation 8") + 
+  xlab("Population") +
+  #scale_fill_manual(values=c("#e26d5c", "#DEBD52", "#6699cc", "gray"))+
+  scale_fill_manual(values=c(RColorBrewer::brewer.pal(4, "Greens")[-1],"gray","#6699cc","#e26d5c","#DEBD52"), #colors in order: 0,1,2,WT,LTR,ARS,ALL. 
+                    breaks=c('0 copy control', '1 copy control', '2 copy control', 'GAP1 WT architecture','GAP1 LTR KO','GAP1 ARS KO', 'GAP1 LTR + ARS KO') #change order of legend items
+                    ) + 
+  ylab("normalized GFP fluorescence") +
+  scale_x_discrete(limits = rev)+ #reverses the order of boxplot
+  #scale_x_discrete(labels=c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"))+
+  theme_classic() +
+  theme(legend.title = element_blank(),
+        axis.text.x = element_text(family="Arial", size = 30, color = "black", angle = 90, vjust = 0.5, hjust=1), #edit x-tick labels
+        axis.text.y = element_text(family="Arial", size = 30, color = "black"),
+        text = element_text(size=30)
+        )
+
+gen8_GFP_boxplot
+#ggsave("gen8_GFP_boxplot_071922.png",bg='#ffffff' )
+```
+
+Clones from g0 and g8 
+Let's graph their GFP ridgeplots
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
