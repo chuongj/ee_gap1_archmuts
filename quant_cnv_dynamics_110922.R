@@ -143,25 +143,27 @@ Tup_merge = rbind(
 quartz()
 #ggplot(Tup_per_pop, aes(reorder(Description, -generation),generation, fill = Description)) +
 #ggplot(Tup_custom, aes(reorder(Description, -generation),generation, fill = Description)) +
-ggplot(Tup_merge, aes(reorder(Description, -generation),generation, fill = Description)) +
+
+Tup_merge$Description <- factor(Tup_merge$Description, levels=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO", "GAP1 LTR + ARS KO")) #reorder boxplots
+
+ggplot(Tup_merge, aes(Description, generation, fill = Description)) +
   geom_boxplot(outlier.shape = NA) +
   xlab("Genotype") +
-  scale_fill_manual(values=c("#e26d5c", "#DEBD52", "#6699cc", "gray"))+
+  scale_fill_manual(values=c("gray", "#6699cc", "#e26d5c", "#DEBD52"))+ #change order of colors
   ylab("Generation of first CNV appearance") +
-  #scale_x_discrete(labels=c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"))+
-  scale_y_continuous(breaks=c(10,20, 30, 40, 50, 60, 70, 80, max(Tup_per_pop$generation)))+
+  scale_x_discrete(labels=c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"))+
+  scale_y_continuous(breaks=c(0, 10, 20, 30, 40, 50, 60, 70, 80, max(Tup_per_pop$generation)))+
   theme_classic() +
   theme(legend.position = "none",
         axis.text.x = element_text(family="Arial", size = 16, color = "black"), #edit x-tick labels
         axis.text.y = element_text(family="Arial", size = 20, color = "black"),
         text = element_text(size=18))+
-  geom_jitter()
-  # #geom_jitter(size = 2, alpha = 0.9,
-  #             #color = c(
-  #   rep("black",5), #wildtype, 5, gray
-  #   "#DEBD52","#DBB741","#D7B02F","#CAA426","#D9BB59","#D7B02F","#CAA426","#D9BB59", #LTR and ARS gold
-  #   "#e26d5c", "#e26d5c", "#e26d5c", "#e26d5c", "#e26d5c", "#e26d5c", "#e26d5c", #ARS, 7, softer salmon repeats
-  #   rep("black", 8) #LTR,8, #blue
+  #geom_jitter()
+ geom_jitter(size = 2, alpha = 0.9,
+   color = c(rep("#6699cc", 7), #LTR,8, #blue
+              rep("black",5), #wildtype, 5, gray
+            rep("#D9BB59",8), #LTR and ARS gold
+            rep("#e26d5c", 7) #ARS, 7, softer salmon repeats
   ))
 #ggsave("01_02_04_v2_fw_Tup_boxplot_042022.png")
 #ggsave("01_02_04_v2_fw_Tup_boxplot_051022.png")
@@ -169,12 +171,16 @@ ggplot(Tup_merge, aes(reorder(Description, -generation),generation, fill = Descr
 # ANOVA to test for significance
 # One Way ANOVA because there is only 1 independent variable, genotype.
 # Anova Tut: https://www.scribbr.com/statistics/anova-in-r/
-Tup_anova = aov(generation~Description, data = Tup_per_pop)
+Tup_anova = aov(generation~Description, data = Tup_merge)
 summary(Tup_anova)
-#            Df  Sum Sq Mean Sq F value  Pr(>F)
-#Description  3   4483  1494.3   6.772 0.00181 **
-#Residuals   24   5296   220.7
+            #Df   Sum Sq  Mean Sq F value   Pr(>F)
+# Description  3   3906    1302   12.52 4.66e-05 ***
+# Residuals   23   2393     104
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # Conclusion: There IS a significant difference in the means. Genotype has has significant effect on Tup.
+
+
 
 #Calculate Sup
 # "Sup is the rate of increase in CNV abundance during the initial expansion of the CNV subpopulation" Lauer et al. 2018
@@ -187,6 +193,10 @@ summary(Tup_anova)
 # accessed in OSF: https://osf.io/fxhze/. CNV, copy number variant.
 
 #Calculate natural log proportion of each population with CNV relative to that without CNV
+
+## well  maybe I Need to draw new gates, since I have to calculate prop of CNV relative to noCNV
+# and I basically believe that my propCNv for WT and LTR are false positives.
+# need gates that make the gen 0-50 smooth smooth! for WT and LTR KO
 ln_table = freq_and_counts %>%
   filter(Count>70000) %>%
   filter(Gate %in% c("two_or_more_copy"), Type == "Experimental") %>%
@@ -269,6 +279,18 @@ assign(paste0(pop_list[27],"_fits","_",4,"pts"), result) #Use assign() to rename
 map(.x = pop_list[1:28], ~sliding_fit(4, .x)) #tilde inside functions (https://stackoverflow.com/questions/70665707/what-is-the-meaning-of-and-inside-the-function-map)
 
 summary(fit)$coef[[4]] #fourth coefficient is the standard error of the linear model slope
+
+
+#### Calculate Tdown
+
+
+
+
+##### Calculate Sdown
+
+
+
+
 
 
 ####### MY PALLETTE
