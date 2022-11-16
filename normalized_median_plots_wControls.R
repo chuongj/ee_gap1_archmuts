@@ -6,19 +6,25 @@
 # For each unique `sample` calculate the median B2-A/FSC-A at each generation.
 
 # on hpc, do once
-sc_distr_alltimepoints %>%
-  group_by(sample, generation) %>%
-  mutate(Med_B2A_FSC = median(B2A_FSC)) %>%
-  distinct(Med_B2A_FSC, .keep_all = T) %>%
-  select(-FSC.A, -B2.A, -B2A_FSC) %>%
-  write_csv("medians_normalized_fluor_alltimepoints.csv")
+# sc_distr_alltimepoints %>%
+#   group_by(sample, generation) %>%
+#   mutate(Med_B2A_FSC = median(B2A_FSC)) %>%
+#   distinct(Med_B2A_FSC, .keep_all = T) %>%
+#   select(-FSC.A, -B2.A, -B2A_FSC) %>%
+#   write_csv("medians_normalized_fluor_alltimepoints.csv")
+#
+# cell_numbers = count %>%
+#   filter(Gate == "Single_cells")
+#
+# norm_medians = read_csv("medians_normalized_fluor_alltimepoints.csv") %>%
+#   left_join(cell_numbers) %>%
 
-cell_numbers = count %>%
-  filter(Gate == "Single_cells")
+norm_medians = read_csv("medians_normalized_fluor_alltimepoints.csv")
 
-norm_medians = read_csv("medians_normalized_fluor_alltimepoints.csv") %>%
-  left_join(cell_numbers) %>%
-
+norm_medians %>% group_by(Description) %>% summarize(min = min(Med_B2A_FSC))
+which(norm_medians, Med_B2A_FSC == 0.453 )
+min100 = norm_medians %>% filter(generation <=100) %>% group_by(Description) %>% slice(which.min((Med_B2A_FSC)))
+min100pop = norm_medians %>% filter(generation <=100) %>% group_by(sample) %>% slice(which.min((Med_B2A_FSC)))
   #Rename description of controls so we can graph them on experimental facet plots
   relabel_controls = norm_medians %>% arrange(Description) %>%
   slice(rep(1:sum(str_detect(norm_medians$Type, "ctrl")), each = 4)) %>% #repeat each control row 4 times because was have 4 facetplots
@@ -75,7 +81,7 @@ anti_join(adj_norm_medians %>% filter(generation == 231 & Type == "0_copy_ctrl")
   )
 #ggsave("MedNormFluo_FacetPlots_NoOutliers_010722.png")
 #ggsave("MedNormFluro_v2_010722.png")
-ggsave("MedNormFluor_051022.png")
+#ggsave("MedNormFluor_051022.png")
 
 
 ### # Graph single plots of median normalized fluorescence for every population (sample)
