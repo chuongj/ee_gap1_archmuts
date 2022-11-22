@@ -18,11 +18,36 @@ library(docstring)
 
 setwd("/Volumes/GoogleDrive/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/data/Summer_LTEE_2021_FCS_files")  #Julie's WD
 
+##### Find timepoint with lowest median normalized GFP
+
+norm_medians = read_csv("medians_normalized_fluor_alltimepoints.csv")
+
+medianGFP = norm_medians %>% filter(generation <=100) %>% group_by(Description, generation) %>% summarize(median = median(Med_B2A_FSC)) %>% slice(which.min(median)) #grouped by Description and took median across each population within its genotype
+
+medianGFP %>% write_csv("min-median-norm-GFP_112222.csv")
+
+# Description          generation    median
+
+#  0 copy control               58  0.403
+#  1 copy control               29  1.74
+#  2 copy control               29  1.99
+#  GAP1 ARS KO                  50  1.86
+#  GAP1 LTR + ARS KO            50  1.93
+#  GAP1 LTR KO                  37  1.74
+#  GAP1 WT architecture         21  1.73
+
 #In addition to having directories (one to many) containing data FSC files, make a gating directory, which is **ONE** directory that contains ALL the FSC files you want to overlay for drawing gates. Read in the names of those directories (data directories and one gating directory) here:
-folders = list.dirs()[c(9:34)] #select the FSC file folders in your directory
+folders = list.dirs()[c(9:36)] #select the FSC file folders in your directory
 
 # Choose a name to be used for all output files including the gating template and associated flow data and graphs.
-version_name = "03_112122_allko" #Timepoint 3 only because it had the lowest median GFP for ALLKO pops. The ancestors have strain-specific GFP that is higher than that of the WT and LTR. Therefore, a separate gating template is needed.
+version_name = "03_two_ctrl"
+version_name = "03_one_ctrl"
+version_name = "06_zero_ctrl"
+
+
+version_name = "04_LTR_112222"
+version_name = "02_WT_112222"
+#version_name = "03_112122_allko" #Timepoint 3 only because it had the lowest median GFP for ALLKO pops. The ancestors have strain-specific GFP that is higher than that of the WT and LTR. Therefore, a separate gating template is needed.
 #version_name = "05_112122_ars" # ARS KO samples only. Timepoint 5 because it has the lowest median GFP. ARS KO only. Because the ancestors have strain-specific GFP that is higher than that of the WT and LTR. Therefore, a separate gating template is needed.
 #version_name = "03_112122_cons" #Timepoint 3 only because it has the lowest median GFP. cons = conservative meaning higher border between 1 and 2 copy gates.
 #version_name = "03_112122_liberal" #Timepoint 3 only because it has the lowest median GFP. Liberal meaning lower border between 1 and 2 copy gates, which will lead to high positive rate and lowest threshold for CNV detection.
@@ -67,7 +92,7 @@ version_name = "03_112122_allko" #Timepoint 3 only because it had the lowest med
 # }
 
 #needs to be run once
-#map(folders[4], make_exp_details, samplesheet = "EE_GAP1_ArchMuts_2021.csv")
+#map(folders[7], make_exp_details, samplesheet = "EE_GAP1_ArchMuts_2021.csv")
 
 # NOTE!!!:Skip Step 2-4 if you already have a gating template and want to apply it to data. Proceed to Step 5.
 #STEP 2: Read in all files in a directory and rename the channels.
@@ -81,7 +106,7 @@ version_name = "03_112122_allko" #Timepoint 3 only because it had the lowest med
 # We think that the cells in timepoint 1 and 2 are still undergoing cellular remodeling/ reaching steady state in the chemostats.
 # these data will guide us on drawing gates.
 # Note: folders[3] is our gating directory
-gating_dir = folders[4] #change this folder for your gating directory
+gating_dir = folders[7] #change this folder for your gating directory
 exp_details_path = list.files(path = paste0(gating_dir), pattern = "_experiment_details.csv", full.names = T)
 
 timepoint_gating_set <- cyto_setup(path = paste0(gating_dir), restrict=TRUE, select="fcs", details=F) #edit Markers on Viewer pane, Save & Close
@@ -119,6 +144,7 @@ transformed_timepoint_gating_set <- cyto_transform(timepoint_gating_set,
 
 ## quickly check the transformation by plotting the data
 #my_samples = which(experiment_details$Description %in% c("0 copy control","1 copy control","2 copy control","GAP1 LTR KO", "GAP1 WT architecture"))
+quartz()
 cyto_plot_explore(transformed_timepoint_gating_set,
                   channels_x = "FSC-A",
                   channels_y = "B2-A",
@@ -201,6 +227,30 @@ axes_limits = "data",
 gatingTemplate = paste0("cytek_gating_",version_name,".csv"),
 overlay = DGY1,
 point_col = c("gray", "green","purple") #parent color then overlay colors
+)
+
+# gating for WT populations
+cyto_gate_draw(transformed_timepoint_gating_set,
+               parent = "Single_cells", #first color
+               alias = c("zero_copy", "one_copy", "two_or_more_copy"), #defines gate names
+               channels = c("FSC-A","B2-A"),
+               axes_limits = "data",
+               #select = list(Strain = c("DGY1","DGY500","DGY1315")),  #control strains
+               gatingTemplate = paste0("cytek_gating_",version_name,".csv"),
+               overlay = DGY1,
+               point_col = c("gray", "green","purple") #parent color then overlay colors
+                )
+
+# gating for LTR populations
+cyto_gate_draw(transformed_timepoint_gating_set,
+               parent = "Single_cells", #first color
+               alias = c("zero_copy", "one_copy", "two_or_more_copy"), #defines gate names
+               channels = c("FSC-A","B2-A"),
+               axes_limits = "data",
+               #select = list(Strain = c("DGY1","DGY500","DGY1315")),  #control strains
+               gatingTemplate = paste0("cytek_gating_",version_name,".csv"),
+               overlay = DGY1,
+               point_col = c("gray", "green","purple") #parent color then overlay colors
 )
 
 
@@ -289,7 +339,7 @@ analyze_all_exp = function(folder_name, my_markers, gating_template="cytek_gatin
 #Uses map from purr() to apply function from step 5 to all directories
 #Author: Julie
 
-try(map(folders[c(1:3,5:6, 8:length(folders))],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
+try(map(folders[c(1:2,5:6, 8:length(folders))],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
 
 #STEP 7: Pull in all counts or freq or single cell distribution files from directory and combine into a single dataframe
 #Author: Julie
@@ -367,7 +417,7 @@ fails %>% group_by(Strain) %>% arrange(generation) %>% View()
 freq_and_counts %>%
   filter(Count>70000,
          str_detect(Description, "control"),
-         generation <250) %>%
+         generation <250) %>% View()
   select(Type, Strain, Description, generation, Gate, Frequency, Count) %>%
   dplyr::filter(!(Description == "1 copy control" & generation == 182 |
                     Description == "2 copy control" & generation == 79 |
@@ -497,9 +547,26 @@ freq_and_counts =
 allko = freq_and_counts %>%
   filter(Description == "GAP1 LTR + ARS KO")
 
+freq %>%
+  filter(Description == "GAP1 LTR + ARS KO") %>%
+  filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>%
+  select(sample, generation, Gate, Frequency, Description) %>%
+  arrange(generation, sample) %>%
+  select(!Gate) %>%
+  write_csv("propCNV_gap1_allko_sbi.csv")
+
+
 # ars ko
 freq = read_csv(paste0("05_112122_ars_freq_all_timepoints.csv"))
 count= read_csv(paste0("05_112122_ars_counts_all_timepoints.csv"))
+
+freq %>%
+  filter(Description == "GAP1 ARS KO") %>%
+  filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>%
+  select(sample, generation, Gate, Frequency, Description) %>%
+  arrange(generation, sample) %>%
+  select(!Gate) %>%
+  write_csv("propCNV_gap1_arsko_sbi.csv")
 
 freq_and_counts =
   count %>% filter(Gate == "Single_cells") %>%
@@ -535,6 +602,104 @@ nrow(thing)
 write_csv(thing, "freq_and_counts_112222_ExperimentalsCombined_noControls.csv")
 
 ## next, later do controls and write a different dataframe for them.
+
+
+
+####
+# Remove the weird timepoints weirdly high and spikey
+freq_and_counts = read_csv("freq_and_counts_112222_ExperimentalsCombined_noControls.csv")
+
+#Lineplot
+clean_freq_and_counts = freq_and_counts %>%
+  filter(Count>70000,
+         generation <= 203) %>%
+  filter(Gate %in% c("two_or_more_copy"), Type == "Experimental") %>%
+  #filter(Description == "GAP1 ARS KO") %>%
+ # filter(sample == "gap1_ars_7") %>%  View
+  anti_join(fails)  %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
+  dplyr::filter(!(Description == "1 copy control" & generation == 182 |
+                    Description == "2 copy control" & generation == 79 |
+                    Description == "2 copy control" & generation == 95 |
+                    Description == "2 copy control" & generation == 108 |
+                    Description == "2 copy control" & generation == 116)) %>% #exclude these controls timepoints that look weird on ridgeplots
+  anti_join(weird_early) %>%
+  anti_join(weird_tp)
+
+clean_freq_and_counts %>% write_csv("freq_and_counts_CLEAN_112222.csv")
+
+#Lineplot
+#freq_and_counts
+clean_freq_and_counts %>%
+  ggplot(aes(generation, Frequency, color = sample)) +
+  geom_line(size = 2.5) +
+  #geom_point()+
+  facet_wrap(~factor(Description,
+                     levels = c("GAP1 WT architecture","GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")), labeller = my_facet_names, scales='free') +
+  xlab("Generation") +
+  ylab("Proportion of cells with GAP1 amplifications") +
+  scale_color_manual(values = c(wtGrays, allGolds,arsSalmons, ltrBlues)) +
+  theme_classic() +
+  #scale_x_continuous(breaks=seq(0,250,50)) +
+  scale_x_continuous(breaks=seq(0,203,50)) +
+  scale_y_continuous(limits=c(0,100)) +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        text = element_text(size=25),
+        legend.position = "none",
+        axis.text.x = element_text(size = 30, color = "black"), #edit x-tick labels
+        axis.text.y = element_text(size = 30, color = "black"),
+        strip.background = element_blank(), #removed box around facet title
+        strip.text = element_text(size=25)
+  )
+
+weird_early =
+  freq_and_counts %>%
+  filter(Description %in% c("GAP1 WT architecture", "GAP1 LTR KO")) %>%
+  filter(generation < 40,
+         Description %in% c("GAP1 WT architecture","GAP1 LTR KO"),
+         Gate == "two_or_more_copy") %>%
+  arrange(generation, sample) %>%
+#select(-name, -`Outflow well`, -Media)
+filter(Frequency > 5) %>% View()
+
+x = freq_and_counts %>%
+  filter(generation == 79,
+         Description == "GAP1 LTR + ARS KO",
+         Gate == "two_or_more_copy") %>%
+        arrange(generation, sample) %>%
+        select(sample, Description, generation, Gate, Parent, Count, Frequency, gating_template) #%>%View()
+
+boxplot(x$Frequency,
+       ylab = "Frequency of GAP1 CNVs"
+)
+      summarize(IQR(Frequency))
+boxplot.stats(x$Frequency)$out  #the outlier Frequency value, #24.15644
+
+
+x = freq_and_counts %>%
+  filter(generation == 37,
+         Description == "GAP1 LTR KO",
+         Gate == "two_or_more_copy") %>%
+  arrange(generation, sample) %>%
+  select(sample, Description, generation, Gate, Parent, Count, Frequency, gating_template)
+
+  #chose these timepoints by eye
+weird_tp = freq_and_counts %>%
+  filter(sample == "gap1_4" & Gate == "two_or_more_copy" & generation == 66 |
+           sample == "gap1_all_3" & Gate == "two_or_more_copy" & generation == 166|
+           sample == "gap1_all_5" & Gate == "two_or_more_copy" & generation == 116|
+           sample == "gap1_all_6" & Gate == "two_or_more_copy" & generation == 124|
+           sample == "gap1_ltr_2" |
+           sample == "gap1_all_3" & Gate == "two_or_more_copy" & generation == 79 |
+           sample == "gap1_ars_7" & Gate == "two_or_more_copy" & generation == 182
+  )
+
+ggsave("propCNVpop_clean_112222.pdf", bg = "#FFFFFF", height = 8, width = 12)
+ggsave("propCNVpop_clean_112222.png", bg = "#FFFFFF", height = 8, width = 12)
+
+
+####
+# Move onto quantify dynamics alla Lauer et al. 2018 and Lang et al. 2011
+# Sup and Sdown
 
 
 

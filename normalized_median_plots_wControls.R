@@ -21,9 +21,11 @@
 
 norm_medians = read_csv("medians_normalized_fluor_alltimepoints.csv")
 
-norm_medians %>% group_by(Description) %>% summarize(min = min(Med_B2A_FSC))
-which(norm_medians, Med_B2A_FSC == 0.453 )
-min100 = norm_medians %>% filter(generation <=100) %>% group_by(Description) %>% slice(which.min((Med_B2A_FSC)))
+
+medianGFP = norm_medians %>% filter(generation <=100) %>% group_by(Description, generation) %>% summarize(median = median(Med_B2A_FSC)) %>% slice(which.min(median))
+medianGFP %>% write_csv("min-median-norm-GFP_112222.csv")
+
+
 min100pop = norm_medians %>% filter(generation <=100) %>% group_by(sample) %>% slice(which.min((Med_B2A_FSC)))
   #Rename description of controls so we can graph them on experimental facet plots
   relabel_controls = norm_medians %>% arrange(Description) %>%
