@@ -24,7 +24,8 @@ norm_medians = read_csv("medians_normalized_fluor_alltimepoints.csv")
 
 medianGFP = norm_medians %>% filter(generation <=100) %>% group_by(Description, generation) %>% summarize(median = median(Med_B2A_FSC)) %>% slice(which.min(median)) #grouped by Description and took median across each population within its genotype
 
-medianGFP %>% write_csv("min-median-norm-GFP_112222.csv")
+#medianGFP %>% write_csv("min-median-norm-GFP_112222.csv")
+medianGFP = read_csv("min-median-norm-GFP_112222.csv")
 
 # Description          generation    median
 
@@ -43,10 +44,10 @@ folders = list.dirs()[c(9:36)] #select the FSC file folders in your directory
 version_name = "03_two_ctrl"
 version_name = "03_one_ctrl"
 version_name = "06_zero_ctrl"
+version_name = "03_LTR_112822"
 
-
-version_name = "04_LTR_112222"
-version_name = "02_WT_112222"
+version_name = "04_LTR_112222" #applied to folders
+version_name = "02_WT_112222" #applied to folders
 #version_name = "03_112122_allko" #Timepoint 3 only because it had the lowest median GFP for ALLKO pops. The ancestors have strain-specific GFP that is higher than that of the WT and LTR. Therefore, a separate gating template is needed.
 #version_name = "05_112122_ars" # ARS KO samples only. Timepoint 5 because it has the lowest median GFP. ARS KO only. Because the ancestors have strain-specific GFP that is higher than that of the WT and LTR. Therefore, a separate gating template is needed.
 #version_name = "03_112122_cons" #Timepoint 3 only because it has the lowest median GFP. cons = conservative meaning higher border between 1 and 2 copy gates.
@@ -339,7 +340,8 @@ analyze_all_exp = function(folder_name, my_markers, gating_template="cytek_gatin
 #Uses map from purr() to apply function from step 5 to all directories
 #Author: Julie
 
-try(map(folders[c(1:2,5:6, 8:length(folders))],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
+try(map(folders[c(1:2,4,6,8,10:length(folders))],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
+try(map(folders[15:length(folders)],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
 
 #STEP 7: Pull in all counts or freq or single cell distribution files from directory and combine into a single dataframe
 #Author: Julie
