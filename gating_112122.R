@@ -39,12 +39,13 @@ medianGFP = read_csv("min-median-norm-GFP_112222.csv")
 
 #In addition to having directories (one to many) containing data FSC files, make a gating directory, which is **ONE** directory that contains ALL the FSC files you want to overlay for drawing gates. Read in the names of those directories (data directories and one gating directory) here:
 folders = list.dirs()[c(9:36)] #select the FSC file folders in your directory
+folders = folders[c(-3,-5,-7,-9)]
 
 # Choose a name to be used for all output files including the gating template and associated flow data and graphs.
-version_name = "03_two_ctrl"
-version_name = "03_one_ctrl"
-version_name = "06_zero_ctrl"
-version_name = "03_LTR_112822"
+version_name = "03_one_ctrl_2Gates"
+version_name = "03_two_ctrl" #draw a two copy gate, not 0 or 1 copy gates.
+version_name = "03_one_ctrl_1Gate" # just draw a one copy gate, no other gates.
+version_name = "06_zero_ctrl" # just to draw a zero copy gate, no other gates
 
 version_name = "04_LTR_112222" #applied to folders
 version_name = "02_WT_112222" #applied to folders
@@ -107,7 +108,7 @@ version_name = "02_WT_112222" #applied to folders
 # We think that the cells in timepoint 1 and 2 are still undergoing cellular remodeling/ reaching steady state in the chemostats.
 # these data will guide us on drawing gates.
 # Note: folders[3] is our gating directory
-gating_dir = folders[7] #change this folder for your gating directory
+gating_dir = folders[6] #change this folder for your gating directory
 exp_details_path = list.files(path = paste0(gating_dir), pattern = "_experiment_details.csv", full.names = T)
 
 timepoint_gating_set <- cyto_setup(path = paste0(gating_dir), restrict=TRUE, select="fcs", details=F) #edit Markers on Viewer pane, Save & Close
@@ -243,6 +244,7 @@ cyto_gate_draw(transformed_timepoint_gating_set,
                 )
 
 # gating for LTR populations
+#gating for zero copy gate, using zero copy pop from timepoint 6
 cyto_gate_draw(transformed_timepoint_gating_set,
                parent = "Single_cells", #first color
                alias = c("zero_copy", "one_copy", "two_or_more_copy"), #defines gate names
@@ -252,6 +254,18 @@ cyto_gate_draw(transformed_timepoint_gating_set,
                gatingTemplate = paste0("cytek_gating_",version_name,".csv"),
                overlay = DGY1,
                point_col = c("gray", "green","purple") #parent color then overlay colors
+)
+
+#gating for zero copy gate, using zero copy pop from timepoint 6
+cyto_gate_draw(transformed_timepoint_gating_set,
+               parent = "Single_cells", #first color
+               alias = c("one_copy", "two_or_more_copy"), #defines gate names
+               channels = c("FSC-A","B2-A"),
+               axes_limits = "data",
+               #select = list(Strain = c("DGY1","DGY500","DGY1315")),  #control strains
+               gatingTemplate = paste0("cytek_gating_",version_name,".csv"),
+               overlay = DGY1,
+               point_col = c("gray") #parent color then overlay colors
 )
 
 
@@ -341,7 +355,7 @@ analyze_all_exp = function(folder_name, my_markers, gating_template="cytek_gatin
 #Author: Julie
 
 try(map(folders[c(1:2,4,6,8,10:length(folders))],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
-try(map(folders[15:length(folders)],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
+try(map(folders[1:length(folders)],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
 
 #STEP 7: Pull in all counts or freq or single cell distribution files from directory and combine into a single dataframe
 #Author: Julie
@@ -419,7 +433,7 @@ fails %>% group_by(Strain) %>% arrange(generation) %>% View()
 freq_and_counts %>%
   filter(Count>70000,
          str_detect(Description, "control"),
-         generation <250) %>% View()
+         generation <250) %>% #View()
   select(Type, Strain, Description, generation, Gate, Frequency, Count) %>%
   dplyr::filter(!(Description == "1 copy control" & generation == 182 |
                     Description == "2 copy control" & generation == 79 |
@@ -447,10 +461,13 @@ for(exp in unique(freq_and_counts$Description)) {
     filter(Count>70000) %>%
     #filter(generation != 79, generation != 116,generation != 182,generation != 252) %>%
     filter(Description==exp) %>%
-    ggplot(aes(generation, Frequency, color = Gate)) +
+    filter(Gate == "two_or_more_copy") %>%
+    #ggplot(aes(generation, Frequency, color = Gate)) +
+    ggplot(aes(generation, Frequency)) +
     geom_line(size =1.5) +
     facet_wrap(~sample) +
-    ylab("% of cells in gate") +
+    #ylab("% of cells in gate") +
+    ylab("% of cells in 2+ copy gate") +
     theme_minimal()+
     scale_x_continuous(breaks=seq(0,250,50))+
     theme(text = element_text(size=10))
@@ -462,6 +479,8 @@ prop_plot_list$`GAP1 ARS KO`
 prop_plot_list$`GAP1 LTR KO`
 prop_plot_list$`GAP1 LTR + ARS KO`
 
+ggsave(paste0("propCNV_WTs_",version_name,"_8x12.pdf"), bg = "#FFFFFF", height = 8, width = 12)
+ggsave(paste0("propCNV_Wts_",version_name,"_8x12.png"), bg = "#FFFFFF", height = 8, width = 12)
 ### Plot proportion of the population with a CNV over time
 
 my_facet_names <- as_labeller(c("GAP1 WT architecture" = "Wildtype architecture",
@@ -524,6 +543,7 @@ ggsave(paste0("propCNV_",version_name,"_112122_8x12.pdf"), bg = "#FFFFFF", heigh
 ggsave(paste0("propCNV_",version_name,"_112122_10x14.pdf"), bg = "#FFFFFF", height = 10, width = 14)
 ggsave(paste0("propCNV_",version_name,"_112122_8x12.png"), bg = "#FFFFFF", height = 8, width = 12)
 ggsave(paste0("propCNV_",version_name,"_112122_10x14.png"), bg = "#FFFFFF", height = 10, width = 14)
+
 
 
 ##############
