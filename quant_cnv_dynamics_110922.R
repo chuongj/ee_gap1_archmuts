@@ -8,11 +8,73 @@ setwd("/Volumes/GoogleDrive/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer
 
 library(tidyverse)
 
-freq_and_counts = read_csv("freq_and_counts_Merged_080622_all_timepoints.csv")
-lowcell = read_csv("lowcell_110922.csv")
-fails = read_csv("fails_110922.csv")
-weird = read_csv("weird_111022.csv")
-freq_and_counts # get rid of these weird early timepoints
+freq_and_counts = read_csv("freq_and_counts_CLEAN_112222") #new freq_and_counts df without controls gated because made custom gates just for the experimental.
+unique(freq_and_counts$Type)
+
+# Proportion of controls in each gate
+# This is for WT and LTR
+freq_and_counts %>%
+  filter(Count>70000,
+         str_detect(Description, "control"),
+         generation <250) %>%
+select(Type, Strain, Description, generation, Gate, Frequency, Count) %>%
+  dplyr::filter(!(Description == "1 copy control" & generation == 182 |
+                    Description == "2 copy control" & generation == 79 |
+                    Description == "2 copy control" & generation == 95 |
+                    Description == "2 copy control" & generation == 108 |
+                    Description == "2 copy control" & generation == 116)) %>% #exclude these controls timepoints that look weird on ridgeplots
+  #anti_join(fails) %>% #exclude the contaminated controls timepoints (the failed timepoints)
+  ggplot(aes(generation, Frequency, color = Gate)) +
+  geom_line() +
+  facet_wrap(~Description) +
+  ylab("% of cells in gate") +
+  theme_minimal() +
+  scale_x_continuous(breaks=seq(0,250,50)) +
+  theme(text = element_text(size=12))
+
+# WT AND LTR False Positive Rate
+CNV_false_pos_df = #freq %>%
+  freq_and_counts %>%
+  filter(Count>70000, generation <=240) %>%
+  dplyr::filter(!(Description == "1 copy control" & generation == 182 |
+                    Description == "2 copy control" & generation == 79 |
+                    Description == "2 copy control" & generation == 95 |
+                    Description == "2 copy control" & generation == 108 |
+                    Description == "2 copy control" & generation == 116)) %>% #exclude these   controls timepoints that look weird on ridgeplots
+  filter(Type == "1_copy_ctrl") %>%
+  filter(Gate %in% c("two_or_more_copy")) %>%
+  select(Type, Strain, Description, generation, Gate, Frequency, Count)
+
+CNV_false_pos_df$Frequency
+hist(CNV_false_pos_df$Frequency)
+
+
+
+##################
+#How to define the false positive rate that is NOT based on the frequency of the controls.. ????
+# Idea1 - Define a false positive rate for each genotype that has a custom gating scheme, one for each of the WTLTR, ARSKO, ALLKO.
+# How1 - Using at timepoint 3, the % of 1-copy controls falling into CNV gate.
+#
+# WT and LTR
+freq_wtltr = read_csv(paste0("03_112122_cons_freq_all_timepoints.csv"))
+count_wtltr= read_csv(paste0("03_112122_cons_counts_all_timepoints.csv"))
+
+freq_and_counts_wtltr =
+  count_wtltr %>% filter(Gate == "Single_cells") %>%
+  rename(Parent = Gate) %>%
+  left_join(freq_wtltr) %>%
+  filter(!(Gate == "Single_cells")) %>%
+  mutate(Frequency = Frequency*100) %>%
+  relocate(2:3, .after = Gate) %>%
+  relocate(9, .after = Frequency) %>%
+  dplyr::filter(!(Description == "1 copy control" & generation == 182 |
+                    Description == "2 copy control" & generation == 79 |
+                    Description == "2 copy control" & generation == 95 |
+                    Description == "2 copy control" & generation == 108 |
+                    Description == "2 copy control" & generation == 116))#exclude these controls timepoints that look weird on ridgeplots
+
+freq_and_counts_wtltr %>% View()
+
 
 #CNV False Positive Rate is defined by the frequency of the 1 copy control strain appearing in the CNV gate which is called the Two_or_more copy gate.
 
