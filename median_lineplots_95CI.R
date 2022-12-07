@@ -44,42 +44,230 @@ weird_tp = freq_and_counts %>%
            sample == "gap1_all_6" & Gate == "two_or_more_copy" & generation == 124|
            sample == "gap1_ltr_2"
   )
-
+############################################################################
 # Plot 1
 # all 5 wildtype lines drawn
 # lineplot of proportion of CNVs over time
 
-
-
-# Plot 2
-# median of all population for each genotype lineplot  with 95% confidence intervals
-
-
-
-###########
-# Current GAM is not a good fit with its parameter span = 1, formula = 'y ~ s(x, bs = "cs")'
-# as discussed when I presented the GAM during lab meeting
-# Instead try to just plot the median of the populations with 95% confidence intervals bars
-
-
-# median line plot code -
-# https://www.datanovia.com/en/lessons/ggplot-error-bars/
+wtGrays = c("gray","#666666","#CCCCCC","gray","#999999")
 
 freq_and_counts %>%
   filter(Count>70000) %>%
   filter(Gate %in% c("two_or_more_copy"), Type == "Experimental",
          generation <= 203) %>%
-  anti_join(fails)  %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
+  anti_join(fails) %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
   anti_join(weird_early) %>%
   anti_join(weird_tp) %>%
   mutate(Description = factor(Description, levels=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")))%>%
-  ggplot(aes(generation, Frequency, color = Description)) +
-  geom_line(aes(linetype = supp, group = supp))+
-  geom_point()+
-  geom_errorbar(
-    aes(ymin = len-sd, ymax = len+sd, group = supp),
-    width = 0.2
-  )
-ggplot(sampleDataFrame, aes(x=percentage, y=temp, colour=userId)) +
-  geom_line() +
-  geom_line(aes(y=means), size=2, color="black")
+  filter(Description == "GAP1 WT architecture") %>%
+  ggplot(aes(generation, Frequency, color = sample)) +
+ # stat_summary(fun.data = median_cl_boot, aes(generation, Frequency, color = Description), geom = "errorbar")+
+  geom_line(size = 3)+
+  scale_color_manual(values=wtGrays,  #custom colors
+                     limits=c("GAP1 WT architecture"),
+                     labels=c("Wild type architecture"))+
+  scale_fill_manual(values=wtGrays, #custom colors
+                    limits=c("GAP1 WT architecture"), #second, change order of legend items, by listing in the order you want em. using the real names in the aes(color =  ) argument
+                    labels=c("Wild type architecture"))+ #third, now you can change legend labels
+  scale_x_continuous(breaks=seq(0,200,50))+
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 25))+
+  #scale_fill_discrete(name = "Dose", labels = c("A", "B", "C"))
+  xlab("Generation")+
+  ylab("Percent of cells with GAP1 CNV") +
+  theme_classic() +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        axis.title = element_text(size = 35),
+        text = element_text(size=25),
+        legend.title = element_blank(),
+        legend.text = element_text(size=25), #change legend text font size
+        axis.text.x = element_text(size = 40, color = "black"), #edit x-tick labels
+        axis.text.y = element_text(size = 44, color = "black"))
+
+ggsave(paste0("WT-propCNV_120622_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
+ggsave(paste0("WT-propCNV_120622_8x16.pdf"), bg = "#FFFFFF", height = 8, width = 16)
+
+
+# Plot 2
+# median of only the WT populations
+quartz()
+freq_and_counts %>%
+  filter(Count>70000) %>%
+  filter(Gate %in% c("two_or_more_copy"), Type == "Experimental",
+         generation <= 203) %>%
+  anti_join(fails) %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
+  anti_join(weird_early) %>%
+  anti_join(weird_tp) %>%
+  mutate(Description = factor(Description, levels=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")))%>%
+  filter(Description == "GAP1 WT architecture") %>%
+  group_by(generation) %>%
+  mutate(med = median(Frequency)) %>% #calculate the medians per genotype per timepoint
+  #arrange(generation, sample) %>%
+  #  select(sample, Description, generation, Frequency, med) %>% View()
+  #stat_summary(aes(generation, med, color = Description) ) +
+  ggplot(aes(generation, med, color = Description)) +
+#  stat_summary(fun.data = median_cl_boot, aes(generation, Frequency, color = Description), geom = "errorbar")+
+  geom_line(size = 3)+
+  scale_color_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"),  #custom colors
+                     limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"),
+                     labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+
+  scale_fill_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"), #custom colors
+                    limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"), #second, change order of legend items, by listing in the order you want em. using the real names in the aes(color =  ) argument
+                    labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+#third, now you can change legend labels
+  scale_x_continuous(breaks=seq(0,200,50))+
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 25))+
+  #scale_fill_discrete(name = "Dose", labels = c("A", "B", "C"))
+  xlab("Generation")+
+  ylab("Percent of cells with GAP1 CNV") +
+  theme_classic() +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        axis.title = element_text(size = 35),
+        text = element_text(size=25),
+        legend.title = element_blank(),
+        legend.text = element_text(size=25), #change legend text font size
+        axis.text.x = element_text(size = 40, color = "black"), #edit x-tick labels
+        axis.text.y = element_text(size = 44, color = "black"))
+
+ggsave(paste0("WT-MEDIAN_noBars_propCNV_120622_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
+ggsave(paste0("WT-MEDIAN_noBars_propCNV_120622_8x16.pdf"), bg = "#FFFFFF", height = 8, width = 16)
+
+# Plot 3 - WT and LTR removed populations - median lineplots with CI bars
+freq_and_counts %>%
+  filter(Count>70000) %>%
+  filter(Gate %in% c("two_or_more_copy"), Type == "Experimental",
+         generation <= 203) %>%
+  anti_join(fails) %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
+  anti_join(weird_early) %>%
+  anti_join(weird_tp) %>%
+  mutate(Description = factor(Description, levels=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")))%>%
+  filter(Description %in% c("GAP1 WT architecture" ,"GAP1 LTR KO")) %>%
+  group_by(Description, generation) %>%
+  mutate(med = median(Frequency)) %>% #calculate the medians per genotype per timepoint
+  #arrange(generation, sample) %>%
+  #  select(sample, Description, generation, Frequency, med) %>% View()
+  #stat_summary(aes(generation, med, color = Description) ) +
+  ggplot(aes(generation, med, color = Description)) +
+#  stat_summary(fun.data = median_cl_boot, aes(generation, Frequency, color = Description), geom = "errorbar")+
+  geom_line(size = 3)+
+  scale_color_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"),  #custom colors
+                     limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"),
+                     labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+
+  scale_fill_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"), #custom colors
+                    limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"), #second, change order of legend items, by listing in the order you want em. using the real names in the aes(color =  ) argument
+                    labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+#third, now you can change legend labels
+  scale_x_continuous(breaks=seq(0,200,50))+
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 25))+
+  #scale_fill_discrete(name = "Dose", labels = c("A", "B", "C"))
+  xlab("Generation")+
+  ylab("Percent of cells with GAP1 CNV") +
+  theme_classic() +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        axis.title = element_text(size = 35),
+        text = element_text(size=25),
+        legend.title = element_blank(),
+        legend.text = element_text(size=25), #change legend text font size
+        axis.text.x = element_text(size = 40, color = "black"), #edit x-tick labels
+        axis.text.y = element_text(size = 44, color = "black"))
+
+ggsave(paste0("WTLTR_MEDIAN_noBars_propCNV_120622_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
+ggsave(paste0("WTLTR_MEDIAN_noBars_propCNV_120622_8x16.pdf"), bg = "#FFFFFF", height = 8, width = 16)
+
+# Plot 4 - WT, LTR removed,  ARS removed populations - median lineplots with CI bars
+freq_and_counts %>%
+  filter(Count>70000) %>%
+  filter(Gate %in% c("two_or_more_copy"), Type == "Experimental",
+         generation <= 203) %>%
+  anti_join(fails) %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
+  anti_join(weird_early) %>%
+  anti_join(weird_tp) %>%
+  mutate(Description = factor(Description, levels=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")))%>%
+  filter(Description %in% c("GAP1 WT architecture" ,"GAP1 LTR KO", "GAP1 ARS KO")) %>%
+  group_by(Description, generation) %>%
+  mutate(med = median(Frequency)) %>% #calculate the medians per genotype per timepoint
+  #arrange(generation, sample) %>%
+  #  select(sample, Description, generation, Frequency, med) %>% View()
+  #stat_summary(aes(generation, med, color = Description) ) +
+  ggplot(aes(generation, med, color = Description)) +
+  #stat_summary(fun.data = median_cl_boot, aes(generation, Frequency, color = Description), geom = "errorbar")+
+  geom_line(size = 3)+
+  scale_color_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"),  #custom colors
+                     limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"),
+                     labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+
+  scale_fill_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"), #custom colors
+                    limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"), #second, change order of legend items, by listing in the order you want em. using the real names in the aes(color =  ) argument
+                    labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+#third, now you can change legend labels
+  scale_x_continuous(breaks=seq(0,200,50))+
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 25))+
+  #scale_fill_discrete(name = "Dose", labels = c("A", "B", "C"))
+  xlab("Generation")+
+  ylab("Percent of cells with GAP1 CNV") +
+  theme_classic() +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        axis.title = element_text(size = 35),
+        text = element_text(size=25),
+        legend.title = element_blank(),
+        legend.text = element_text(size=25), #change legend text font size
+        axis.text.x = element_text(size = 40, color = "black"), #edit x-tick labels
+        axis.text.y = element_text(size = 44, color = "black"))
+
+ggsave(paste0("WTLTRARS_noBars_MEDIAN_propCNV_120622_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
+ggsave(paste0("WTLTRARS_noBars_MEDIAN_propCNV_120622_8x16.pdf"), bg = "#FFFFFF", height = 8, width = 16)
+
+
+# Plot 5
+# median of all population for each genotype lineplot  with 95% confidence intervals
+# median line plot code -
+# https://www.datanovia.com/en/lessons/ggplot-error-bars/
+# http://rstudio-pubs-static.s3.amazonaws.com/28101_41a7995107d94c8dbb07bbf7cd7e8291.html
+library(elucidate)
+
+# bootstrap the 95% confidence interval
+median_cl_boot <- function(x, conf = 0.95) {
+  lconf <- (1 - conf)/2
+  uconf <- 1 - lconf
+  require(boot)
+  bmedian <- function(x, ind) median(x[ind])
+  bt <- boot(x, bmedian, 1000)
+  bb <- boot.ci(bt, type = "perc")
+  data.frame(y = median(x), ymin = quantile(bt$t, lconf), ymax = quantile(bt$t,
+                                                                          uconf))
+}
+
+quartz()
+freq_and_counts %>%
+  filter(Count>70000) %>%
+  filter(Gate %in% c("two_or_more_copy"), Type == "Experimental",
+         generation <= 203) %>%
+  anti_join(fails) %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
+  anti_join(weird_early) %>%
+  anti_join(weird_tp) %>%
+  mutate(Description = factor(Description, levels=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")))%>%
+  group_by(generation, Description) %>%
+  mutate(med = median(Frequency)) %>% #calculate the medians per genotype per timepoint
+  #arrange(generation, sample) %>%
+#  select(sample, Description, generation, Frequency, med) %>% View()
+  #stat_summary(aes(generation, med, color = Description) ) +
+  ggplot(aes(generation, med, color = Description)) +
+  #stat_summary(fun.data = median_cl_boot, aes(generation, Frequency, color = Description), geom = "errorbar")+
+  geom_line(size = 3)+
+  scale_color_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"),  #custom colors
+                     limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"),
+                     labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+
+  scale_fill_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"), #custom colors
+                    limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"), #second, change order of legend items, by listing in the order you want em. using the real names in the aes(color =  ) argument
+                    labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+#third, now you can change legend labels
+  scale_x_continuous(breaks=seq(0,200,50))+
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 25))+
+  #scale_fill_discrete(name = "Dose", labels = c("A", "B", "C"))
+  xlab("Generation")+
+  ylab("Percent of cells with GAP1 CNV") +
+  theme_classic() +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        axis.title = element_text(size = 35),
+        text = element_text(size=25),
+        legend.title = element_blank(),
+        legend.text = element_text(size=25), #change legend text font size
+        axis.text.x = element_text(size = 40, color = "black"), #edit x-tick labels
+        axis.text.y = element_text(size = 44, color = "black"))
+
+ggsave(paste0("medianpropCNV_noBars_120622_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
+ggsave(paste0("medianpropCNV_noBars_120622_8x16.pdf"), bg = "#FFFFFF", height = 8, width = 16)
