@@ -27,21 +27,22 @@ medianGFP = norm_medians %>% filter(generation <=100) %>% group_by(Description, 
 #medianGFP %>% write_csv("min-median-norm-GFP_112222.csv")
 medianGFP = read_csv("min-median-norm-GFP_112222.csv")
 
-# Description          generation    median
+# Description         generation    median   timepoint
 
-#  0 copy control               58  0.403
-#  1 copy control               29  1.74
-#  2 copy control               29  1.99
-#  GAP1 ARS KO                  50  1.86
-#  GAP1 LTR + ARS KO            50  1.93
-#  GAP1 LTR KO                  37  1.74
-#  GAP1 WT architecture         21  1.73
+#  0 copy control               58  0.403     06
+#  1 copy control               29  1.74      03
+#  2 copy control               29  1.99      03
+#  GAP1 ARS KO                  50  1.86      05
+#  GAP1 LTR + ARS KO            50  1.93      05
+#  GAP1 LTR KO                  37  1.74      04
+#  GAP1 WT architecture         21  1.73      02
 
 #In addition to having directories (one to many) containing data FSC files, make a gating directory, which is **ONE** directory that contains ALL the FSC files you want to overlay for drawing gates. Read in the names of those directories (data directories and one gating directory) here:
 folders = list.dirs()[c(9:36)] #select the FSC file folders in your directory
 folders = folders[c(-3,-5,-7,-9)]
 
 # Choose a name to be used for all output files including the gating template and associated flow data and graphs.
+version_name = "05_ALL_120822" #to do.
 version_name = "03_one_ctrl_2Gates"
 version_name = "03_two_ctrl" #draw a two copy gate, not 0 or 1 copy gates.
 version_name = "03_one_ctrl_1Gate" # just draw a one copy gate, no other gates.
@@ -49,7 +50,7 @@ version_name = "06_zero_ctrl" # just to draw a zero copy gate, no other gates
 
 version_name = "04_LTR_112222" #applied to folders
 version_name = "02_WT_112222" #applied to folders
-#version_name = "03_112122_allko" #Timepoint 3 only because it had the lowest median GFP for ALLKO pops. The ancestors have strain-specific GFP that is higher than that of the WT and LTR. Therefore, a separate gating template is needed.
+#version_name = "03_112122_allko" #Timepoint 3 only because it had the lowest median GFP for ALLKO pops. THIS IS NOT TRUE. TIMEPOINT 5 had the lowest. Use this instead: "05_ALL_120822
 #version_name = "05_112122_ars" # ARS KO samples only. Timepoint 5 because it has the lowest median GFP. ARS KO only. Because the ancestors have strain-specific GFP that is higher than that of the WT and LTR. Therefore, a separate gating template is needed.
 #version_name = "03_112122_cons" #Timepoint 3 only because it has the lowest median GFP. cons = conservative meaning higher border between 1 and 2 copy gates.
 #version_name = "03_112122_liberal" #Timepoint 3 only because it has the lowest median GFP. Liberal meaning lower border between 1 and 2 copy gates, which will lead to high positive rate and lowest threshold for CNV detection.
