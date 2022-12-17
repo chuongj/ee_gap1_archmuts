@@ -18,7 +18,7 @@ library(docstring)
 
 setwd("/Volumes/GoogleDrive/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/data/Summer_LTEE_2021_FCS_files")  #Julie's WD
 
-##### Find timepoint with lowest median normalized GFP
+##### Find timepoint with lowest median normalized GFP for each of the 4 genotypes ####
 
 norm_medians = read_csv("medians_normalized_fluor_alltimepoints.csv")
 
@@ -42,12 +42,12 @@ folders = list.dirs()[c(9:36)] #select the FSC file folders in your directory
 folders = folders[c(-3,-5,-7,-9)]
 
 # Choose a name to be used for all output files including the gating template and associated flow data and graphs.
-version_name = "05_ALL_120822" #to do.
+
 version_name = "03_one_ctrl_2Gates"
 version_name = "03_two_ctrl" #draw a two copy gate, not 0 or 1 copy gates.
 version_name = "03_one_ctrl_1Gate" # just draw a one copy gate, no other gates.
 version_name = "06_zero_ctrl" # just to draw a zero copy gate, no other gates
-
+version_name = "05_ALL_121522" #gates drawn, need to apply
 version_name = "04_LTR_112222" #applied to folders
 version_name = "02_WT_112222" #applied to folders
 #version_name = "03_112122_allko" #Timepoint 3 only because it had the lowest median GFP for ALLKO pops. THIS IS NOT TRUE. TIMEPOINT 5 had the lowest. Use this instead: "05_ALL_120822
@@ -70,32 +70,60 @@ version_name = "02_WT_112222" #applied to folders
 # Experiment details file is a .csv file that contains the list of .fcs files in the directory and the associated metadata for each sample
 #Author: Grace
 
-# make_exp_details = function(folder_name, samplesheet) {
-#   pref = folder_name %>% str_extract("([0-9])+_EE_GAP1_ArchMuts_2021")
-#   generation = folder_name %>% str_extract("[g]\\d+") %>% str_remove("g")
-#
-#   files = as_tibble(list.files(paste0(folder_name))) %>%
-#     separate(value, into = c("well", "samp"), sep = " ", remove = F) %>%
-#     mutate(well = str_extract(well, "([A-Z])([0-9]){1,2}$")) %>%
-#     mutate(samp = str_remove(samp, ".fcs")) %>%
-#     mutate(sample = case_when(str_detect(value, "Unstained") ~ "ctrl0",
-#                               str_detect(value, "DGY500") ~ "ctrl1",
-#                               str_detect(value, "DGY1315") ~ "ctrl2",
-#                               TRUE ~ samp)) %>%
-#     select(value,sample) %>%
-#     rename(name = value) %>%
-#     filter(!is.na(sample))
-#
-#   all = files %>%
-#     left_join(read_csv(paste0("./",samplesheet)), by = c("sample" = "Sample name")) %>%
-#     mutate(generation = as.numeric(generation))
-#
-#   write_csv(all, file = paste0(folder_name,"/",pref,"_experiment_details.csv"))
-#
-# }
+make_exp_details = function(folder_name, samplesheet) {
+  pref = folder_name %>% str_extract("([0-9])+_EE_GAP1_ArchMuts_2021")
+  generation = folder_name %>% str_extract("[g]\\d+") %>% str_remove("g")
+
+  files = as_tibble(list.files(paste0(folder_name))) %>%
+    separate(value, into = c("well", "samp"), sep = " ", remove = F) %>%
+    mutate(well = str_extract(well, "([A-Z])([0-9]){1,2}$")) %>%
+    mutate(samp = str_remove(samp, ".fcs")) %>%
+    mutate(sample = case_when(str_detect(value, "Unstained") ~ "ctrl0",
+                              str_detect(value, "DGY500") ~ "ctrl1",
+                              str_detect(value, "DGY1315") ~ "ctrl2",
+                              TRUE ~ samp)) %>% 
+    select(value,sample) %>% 
+    rename(name = value) %>% 
+    filter(!is.na(sample))
+
+  all = files %>%
+    left_join(read_csv(paste0("./",samplesheet)), by = c("sample" = "Sample name")) %>%
+    mutate(generation = as.numeric(generation))
+
+  write_csv(all, file = paste0(folder_name,"/",pref,"_experiment_details.csv"))
+
+}
+
+#### debug ###
+make_exp_details = function(folder_name, samplesheet) {
+  pref = folder_name %>% str_extract("([0-9])+_EE_GAP1_ArchMuts_2021")
+  generation = folder_name %>% str_extract("[g]\\d+") %>% str_remove("g")
+  
+  files = as_tibble(list.files(paste0(folder_name))) %>%
+    separate(value, into = c("well", "samp"), sep = " ", remove = F) %>%
+    mutate(well = str_extract(well, "([A-Z])([0-9]){1,2}$")) %>%
+    mutate(samp = str_remove(samp, ".fcs")) %>%
+    mutate(sample = case_when(str_detect(value, "Unstained") ~ "ctrl0",
+                              str_detect(value, "DGY500") ~ "ctrl1",
+                              str_detect(value, "DGY1315") ~ "ctrl2",
+                              TRUE ~ samp)) %>% 
+    select(value,sample) %>% 
+    rename(name = value)
+   # filter(!is.na(sample))   #removing this line made the function work again
+  
+  all = files %>%
+    left_join(read_csv(paste0("./",samplesheet)), by = c("sample" = "Sample name")) %>%
+    mutate(generation = as.numeric(generation))
+  
+  write_csv(all, file = paste0(folder_name,"/",pref,"_experiment_details.csv"))
+  
+}
+
+
 
 #needs to be run once
-#map(folders[7], make_exp_details, samplesheet = "EE_GAP1_ArchMuts_2021.csv")
+map(folders[1:length(folders)], make_exp_details, samplesheet = "EE_GAP1_ArchMuts_2021.csv")
+#map(sample_folders[1:length(sample_folders)], make_exp_details, samplesheet = "EE_GAP1_ArchMuts_2021.csv")
 
 # NOTE!!!:Skip Step 2-4 if you already have a gating template and want to apply it to data. Proceed to Step 5.
 #STEP 2: Read in all files in a directory and rename the channels.
@@ -109,7 +137,7 @@ version_name = "02_WT_112222" #applied to folders
 # We think that the cells in timepoint 1 and 2 are still undergoing cellular remodeling/ reaching steady state in the chemostats.
 # these data will guide us on drawing gates.
 # Note: folders[3] is our gating directory
-gating_dir = folders[6] #change this folder for your gating directory
+gating_dir = folders[17] #change this folder for your gating directory
 exp_details_path = list.files(path = paste0(gating_dir), pattern = "_experiment_details.csv", full.names = T)
 
 timepoint_gating_set <- cyto_setup(path = paste0(gating_dir), restrict=TRUE, select="fcs", details=F) #edit Markers on Viewer pane, Save & Close
@@ -355,8 +383,12 @@ analyze_all_exp = function(folder_name, my_markers, gating_template="cytek_gatin
 #Uses map from purr() to apply function from step 5 to all directories
 #Author: Julie
 
+samples_dir = file.path("../FCS_LTR")
+folders = list.dirs(samples_dir)[-1]
+sample_folders = list.dirs(samples_dir)[-1][3:4]
+
 try(map(folders[c(1:2,4,6,8,10:length(folders))],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
-try(map(folders[1:length(folders)],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
+try(map(sample_folders[1:length(sample_folders)],analyze_all_exp, my_markers, gating_template = paste0("cytek_gating_",version_name,".csv")))
 
 #STEP 7: Pull in all counts or freq or single cell distribution files from directory and combine into a single dataframe
 #Author: Julie
@@ -386,6 +418,12 @@ list.files(path = ".", pattern = paste0(version_name,"_freq_([0-9])+_EE_GAP1_Arc
 freq = read_csv(paste0(version_name,"_freq_all_timepoints.csv"))
 count= read_csv(paste0(version_name,"_counts_all_timepoints.csv"))
 
+freq = read_csv("02_WT_112222_freq_all_timepoints.csv")
+count = read_csv("02_WT_112222_counts_all_timepoints.csv")
+
+freq = read_csv("04_LTR_112222_freq_all_timepoints.csv")
+count = read_csv("04_LTR_112222_counts_all_timepoints.csv")
+
 #sc_distr_alltimepoints <- read.csv(paste0(version_name,"_SingleCellDistributions_all_timepoints.csv", stringsAsFactors = T)) %>% mutate(generation = factor(generation, levels = unique(generation)))
 
 freq_and_counts =
@@ -404,7 +442,7 @@ lowcell = freq_and_counts %>%
   select(-Count)
 
 ## check controls are in their proper gates
-fails = freq_and_counts %>%
+fail_ctrls = freq_and_counts %>%
   filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
   filter(str_detect(Description, "control")) %>%
   select(Description, Strain, generation, Gate, Frequency, name, Count) %>%
@@ -423,12 +461,12 @@ fails = freq_and_counts %>%
   ))%>%
   dplyr::filter(flag == "fail") %>%
   arrange(Description)
-View(fails)
-fails %>% group_by(Strain) %>% arrange(generation) %>% View()
-#fails %>% write_csv("01_02_04_v2_83_fail.csv")
-#fails %>% write_csv("01_02_04_v2_fail_calc_thres_stringent_.csv")
-#fails %>% write_csv("01_02_04_v2_79_10_fail_.csv")
-#fails %>% write_csv("01_02_04_v2_fw_79_11_fail.csv")
+View(fail_ctrls)
+fail_ctrls %>% group_by(Strain) %>% arrange(generation) %>% View()
+#fail_ctrls %>% write_csv("01_02_04_v2_83_fail.csv")
+#fail_ctrls %>% write_csv("01_02_04_v2_fail_calc_thres_stringent_.csv")
+#fail_ctrls %>% write_csv("01_02_04_v2_79_10_fail_.csv")
+#fail_ctrls %>% write_csv("01_02_04_v2_fw_79_11_fail.csv")
 
 # plot proportion of control cells in control gates over time
 freq_and_counts %>%
@@ -441,7 +479,7 @@ freq_and_counts %>%
                     Description == "2 copy control" & generation == 95 |
                     Description == "2 copy control" & generation == 108 |
                     Description == "2 copy control" & generation == 116)) %>% #exclude these controls timepoints that look weird on ridgeplots
-  #anti_join(fails) %>% #exclude the contaminated controls timepoints (the failed timepoints)
+  #anti_join(fail_ctrls) %>% #exclude the contaminated controls timepoints (the failed timepoints)
   ggplot(aes(generation, Frequency, color = Gate)) +
   geom_line() +
   facet_wrap(~Description) +
@@ -512,7 +550,7 @@ propCNV = freq_and_counts %>%
   filter(Count>70000,
          generation <= 203) %>%
   filter(Gate %in% c("two_or_more_copy"), Type == "Experimental") %>%
-  anti_join(fails)  %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
+  anti_join(fail_ctrls)  %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
   dplyr::filter(!(Description == "1 copy control" & generation == 182 |
                     Description == "2 copy control" & generation == 79 |
                     Description == "2 copy control" & generation == 95 |
@@ -545,18 +583,23 @@ ggsave(paste0("propCNV_",version_name,"_112122_10x14.pdf"), bg = "#FFFFFF", heig
 ggsave(paste0("propCNV_",version_name,"_112122_8x12.png"), bg = "#FFFFFF", height = 8, width = 12)
 ggsave(paste0("propCNV_",version_name,"_112122_10x14.png"), bg = "#FFFFFF", height = 10, width = 14)
 
-
-
 ##############
 # Now that we have made gates for based on the lowest median normalized GFP timepoint
 # and outputted freq and counts files for each gating template, let's merge them for the geno's we want.
-# WT and LTR KO "03_112122_cons" and "03_112122_liberal"
-# ARS KO "05_112122_ars"
-# ALL KO "03_112122_allko"
+# as export data frames for each genotype that will be input for SBI 
 
-# all ko
-freq = read_csv(paste0("03_112122_allko_freq_all_timepoints.csv"))
-count= read_csv(paste0("03_112122_allko_counts_all_timepoints.csv"))
+# freq_and_counts.csv to input
+# WT       02_WT_112222
+# LTR KO   04_LTR_112222
+# ARS KO   05_112122_ars
+# ALL KO   05_ALL_121522
+
+#### Export data frames that will be inputs for SBI #### 
+# Filter for only CNV gates, until generation 116, samples with >70,000 cells. 
+
+# Wildtype architecture
+freq = read_csv("02_WT_112222_freq_all_timepoints.csv")
+count = read_csv("02_WT_112222_counts_all_timepoints.csv")
 
 freq_and_counts =
   count %>% filter(Gate == "Single_cells") %>%
@@ -567,10 +610,79 @@ freq_and_counts =
   relocate(2:3, .after = Gate) %>%
   relocate(9, .after = Frequency)
 
-allko = freq_and_counts %>%
-  filter(Description == "GAP1 LTR + ARS KO")
+freq_and_counts %>%
+  filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
+  filter(Description == "GAP1 WT architecture") %>% 
+  filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>% 
+  select(sample, generation, Gate, Frequency, Description) %>%
+  arrange(generation, sample) %>%
+  select(!Gate) %>%
+  write_csv("propCNV_gap1_WT_sbi.csv")
 
-freq %>%
+
+# LTR KO - remove population LTR_2 for sbi as well as for other CNV dynamics analysis 
+freq = read_csv("04_LTR_112222_freq_all_timepoints.csv")
+count = read_csv("04_LTR_112222_counts_all_timepoints.csv")
+
+freq_and_counts =
+  count %>% filter(Gate == "Single_cells") %>%
+  rename(Parent = Gate) %>%
+  left_join(freq) %>%
+  filter(!(Gate == "Single_cells")) %>%
+  mutate(Frequency = Frequency*100) %>%
+  relocate(2:3, .after = Gate) %>%
+  relocate(9, .after = Frequency)
+
+LTR = 
+  freq_and_counts %>%
+  filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
+  filter(Description == "GAP1 LTR KO") %>% 
+  filter(!sample == "gap1_ltr_2")  %>% 
+  filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>% 
+  select(sample, generation, Gate, Frequency, Description) %>%
+  arrange(generation, sample) %>%
+  select(!Gate) %>%
+  write_csv("propCNV_gap1_LTRKO_sbi.csv")
+
+# ARS KO
+freq = read_csv(paste0("05_112122_ars_freq_all_timepoints.csv"))
+count= read_csv(paste0("05_112122_ars_counts_all_timepoints.csv"))
+
+freq_and_counts =
+  count %>% filter(Gate == "Single_cells") %>%
+  rename(Parent = Gate) %>%
+  left_join(freq) %>%
+  filter(!(Gate == "Single_cells")) %>%
+  mutate(Frequency = Frequency*100) %>%
+  relocate(2:3, .after = Gate) %>%
+  relocate(9, .after = Frequency)
+
+ARS = freq_and_counts %>%
+  filter(Count>70000) %>% 
+  filter(Description == "GAP1 ARS KO") %>% distinct(generation)
+  filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>%
+  select(sample, generation, Gate, Frequency, Description) %>%
+  arrange(generation, sample) %>% 
+  select(!Gate) #%>%
+#  write_csv("propCNV_gap1_arsko_sbi.csv")
+
+
+
+# ALL KO
+freq = read_csv(paste0("05_ALL_121522_freq_all_timepoints.csv")) #Do not use T03, use T05 
+count= read_csv(paste0("05_ALL_121522_counts_all_timepoints.csv")) #Do not use T03, use T05 
+
+freq_and_counts =
+  count %>% filter(Gate == "Single_cells") %>%
+  rename(Parent = Gate) %>%
+  left_join(freq) %>%
+  filter(!(Gate == "Single_cells")) %>%
+  mutate(Frequency = Frequency*100) %>%
+  relocate(2:3, .after = Gate) %>%
+  relocate(9, .after = Frequency)
+
+freq_and_counts %>%
+  filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
   filter(Description == "GAP1 LTR + ARS KO") %>%
   filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>%
   select(sample, generation, Gate, Frequency, Description) %>%
@@ -579,80 +691,93 @@ freq %>%
   write_csv("propCNV_gap1_allko_sbi.csv")
 
 
-# ars ko
+####### Merge all experimental for each 4 genotypes into one dataframe with no filtering ####### 
+
+# Wildtype architecture
+freq = read_csv("02_WT_112222_freq_all_timepoints.csv")
+count = read_csv("02_WT_112222_counts_all_timepoints.csv")
+WT = count %>% filter(Gate == "Single_cells") %>%
+  rename(Parent = Gate) %>%
+  left_join(freq) %>%
+  filter(!(Gate == "Single_cells")) %>%
+  mutate(Frequency = Frequency*100) %>%
+  relocate(2:3, .after = Gate) %>%
+  relocate(9, .after = Frequency) %>%
+  filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
+  filter(Description == "GAP1 WT architecture")
+
+# LTR KO
+freq = read_csv("04_LTR_112222_freq_all_timepoints.csv")
+count = read_csv("04_LTR_112222_counts_all_timepoints.csv")
+LTR =
+  count %>% filter(Gate == "Single_cells") %>%
+  rename(Parent = Gate) %>%
+  left_join(freq) %>%
+  filter(!(Gate == "Single_cells")) %>%
+  mutate(Frequency = Frequency*100) %>%
+  relocate(2:3, .after = Gate) %>%
+  relocate(9, .after = Frequency) %>%
+  filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
+  filter(Description == "GAP1 LTR KO")
+
+# ARS KO
 freq = read_csv(paste0("05_112122_ars_freq_all_timepoints.csv"))
 count= read_csv(paste0("05_112122_ars_counts_all_timepoints.csv"))
-
-freq %>%
-  filter(Description == "GAP1 ARS KO") %>%
-  filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>%
-  select(sample, generation, Gate, Frequency, Description) %>%
-  arrange(generation, sample) %>%
-  select(!Gate) %>%
-  write_csv("propCNV_gap1_arsko_sbi.csv")
-
-freq_and_counts =
+ARS =
   count %>% filter(Gate == "Single_cells") %>%
   rename(Parent = Gate) %>%
   left_join(freq) %>%
   filter(!(Gate == "Single_cells")) %>%
   mutate(Frequency = Frequency*100) %>%
   relocate(2:3, .after = Gate) %>%
-  relocate(9, .after = Frequency)
+  relocate(9, .after = Frequency) %>%
+  filter(Count>70000) %>% 
+  filter(Description == "GAP1 ARS KO")
 
-arsFC = freq_and_counts %>% filter(Description=="GAP1 ARS KO")
-
-# wt and ltr
-freq = read_csv(paste0("03_112122_cons_freq_all_timepoints.csv"))
-count= read_csv(paste0("03_112122_cons_counts_all_timepoints.csv"))
-freq_and_counts =
+# All KO
+freq = read_csv(paste0("05_ALL_121522_freq_all_timepoints.csv")) #Do not use T03, use T05 
+count= read_csv(paste0("05_ALL_121522_counts_all_timepoints.csv")) #Do not use T03, use T05 
+ALLKO =
   count %>% filter(Gate == "Single_cells") %>%
   rename(Parent = Gate) %>%
   left_join(freq) %>%
   filter(!(Gate == "Single_cells")) %>%
   mutate(Frequency = Frequency*100) %>%
   relocate(2:3, .after = Gate) %>%
-  relocate(9, .after = Frequency)
-
-wtltr = freq_and_counts %>% filter(Description %in% c("GAP1 WT architecture","GAP1 LTR KO"))
-
-thing = bind_rows(wtltr, arsFC, allko)
-nrow(wtltr)
-nrow(arsFC)
-nrow(allko)
-nrow(thing)
-
-write_csv(thing, "freq_and_counts_112222_ExperimentalsCombined_noControls.csv")
-
-## next, later do controls and write a different dataframe for them.
+  relocate(9, .after = Frequency) %>%
+  filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
+  filter(Description == "GAP1 LTR + ARS KO")
 
 
+#Merge them to one dataframe
+merged_samps = bind_rows(WT, LTR, ARS, ALLKO)
+nrow(WT)
+nrow(LTR)
+nrow(ARS)
+nrow(ALLKO)
 
-####
+nrow(merged_samps)
+
+write_csv(merged_samps, "freq_and_counts_121622_MERGED_Experimentals_noControls.csv")
+
+#### Next, repeat process for the CONTROLS and write a different dataframe for them. ####
+
+
+
+#### CLEAN UP THE DATA #### for the paper and presentations
+
 # Remove the weird timepoints weirdly high and spikey
-freq_and_counts = read_csv("freq_and_counts_112222_ExperimentalsCombined_noControls.csv")
+# Do an outlier test? 
+freq_and_counts = read_csv("freq_and_counts_121622_MERGED_Experimentals_noControls.csv")
 
-#Lineplot
-clean_freq_and_counts = freq_and_counts %>%
+#STEP 1: Plot the data to identify outliers 
+#freq_and_counts
+quartz()
+#freq_and_counts %>%
+clean_freq_and_counts %>%
   filter(Count>70000,
          generation <= 203) %>%
   filter(Gate %in% c("two_or_more_copy"), Type == "Experimental") %>%
-  #filter(Description == "GAP1 ARS KO") %>%
- # filter(sample == "gap1_ars_7") %>%  View
-  anti_join(fails)  %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
-  dplyr::filter(!(Description == "1 copy control" & generation == 182 |
-                    Description == "2 copy control" & generation == 79 |
-                    Description == "2 copy control" & generation == 95 |
-                    Description == "2 copy control" & generation == 108 |
-                    Description == "2 copy control" & generation == 116)) %>% #exclude these controls timepoints that look weird on ridgeplots
-  anti_join(weird_early) %>%
-  anti_join(weird_tp)
-
-clean_freq_and_counts %>% write_csv("freq_and_counts_CLEAN_112222.csv")
-
-#Lineplot
-#freq_and_counts
-clean_freq_and_counts %>%
   ggplot(aes(generation, Frequency, color = sample)) +
   geom_line(size = 2.5) +
   #geom_point()+
@@ -673,56 +798,66 @@ clean_freq_and_counts %>%
         strip.background = element_blank(), #removed box around facet title
         strip.text = element_text(size=25)
   )
-
-weird_early =
+#early timepoints - most are NOT outliers using the IQR rule
+# only LTR_4 g21 is outlier using IQR rule
+# so don't anti_join(weird_pre50)
+weird_pre50 =
   freq_and_counts %>%
-  filter(Description %in% c("GAP1 WT architecture", "GAP1 LTR KO")) %>%
-  filter(generation < 40,
+  filter(generation < 50,
          Description %in% c("GAP1 WT architecture","GAP1 LTR KO"),
          Gate == "two_or_more_copy") %>%
   arrange(generation, sample) %>%
-#select(-name, -`Outflow well`, -Media)
-filter(Frequency > 5) %>% View()
+select(-name, -`Outflow well`, -Media, -Strain, -Type, -Description) %>%
+filter(Frequency > 6)
 
+# IQR to detect outliers within a timepoint 
 x = freq_and_counts %>%
-  filter(generation == 79,
-         Description == "GAP1 LTR + ARS KO",
+  filter(generation == 50,
+         Description == "GAP1 WT architecture",
          Gate == "two_or_more_copy") %>%
         arrange(generation, sample) %>%
-        select(sample, Description, generation, Gate, Parent, Count, Frequency, gating_template) #%>%View()
+        select(sample, Description, generation, Gate, Parent, Count, Frequency, gating_template) 
 
 boxplot(x$Frequency,
-       ylab = "Frequency of GAP1 CNVs"
-)
-      summarize(IQR(Frequency))
-boxplot.stats(x$Frequency)$out  #the outlier Frequency value, #24.15644
+       ylab = "Frequency of GAP1 CNVs")
+boxplot.stats(x$Frequency)$out  #the outlier Frequency value   LTR_4, g21, 17.3% freq is outlier 
 
-
-x = freq_and_counts %>%
-  filter(generation == 37,
-         Description == "GAP1 LTR KO",
-         Gate == "two_or_more_copy") %>%
-  arrange(generation, sample) %>%
-  select(sample, Description, generation, Gate, Parent, Count, Frequency, gating_template)
-
-  #chose these timepoints by eye
+#chose these timepoints by eye
 weird_tp = freq_and_counts %>%
-  filter(sample == "gap1_4" & Gate == "two_or_more_copy" & generation == 66 |
+  filter(sample == "gap1_4" & Gate == "two_or_more_copy" & generation == 66 |  #use slope rule
+           sample == "gap1_2" & Gate == "two_or_more_copy" & generation == 108|  #use slope rule
+           sample == "gap1_ltr_2" |  
+           sample == "gap1_ltr_4" & Gate == "two_or_more_copy" & generation == 21 | # 17.3%
            sample == "gap1_all_3" & Gate == "two_or_more_copy" & generation == 166|
            sample == "gap1_all_5" & Gate == "two_or_more_copy" & generation == 116|
            sample == "gap1_all_6" & Gate == "two_or_more_copy" & generation == 124|
-           sample == "gap1_ltr_2" |
            sample == "gap1_all_3" & Gate == "two_or_more_copy" & generation == 79 |
            sample == "gap1_ars_7" & Gate == "two_or_more_copy" & generation == 182
   )
 
-ggsave("propCNVpop_clean_112222.pdf", bg = "#FFFFFF", height = 8, width = 12)
-ggsave("propCNVpop_clean_112222.png", bg = "#FFFFFF", height = 8, width = 12)
+clean_freq_and_counts = freq_and_counts %>%
+  filter(Count>70000,
+         generation <= 203) %>%
+  filter(Gate %in% c("two_or_more_copy"), Type == "Experimental") %>%
+  anti_join(weird_tp)
 
+clean_freq_and_counts %>% write_csv("freq_and_counts_merged_CLEAN_121622.csv")
 
-####
+ggsave("propCNVpop_clean_121622.pdf", bg = "#FFFFFF", height = 8, width = 12)
+ggsave("propCNVpop_clean_121622.png", bg = "#FFFFFF", height = 8, width = 12)
+
+#### The medians of populations for each genotype on a single plot ####
+
+# See script median_lineplots_95CI_121622.R
+
+#### Quantify CNV dynamics #### 
 # Move onto quantify dynamics alla Lauer et al. 2018 and Lang et al. 2011
-# Sup and Sdown
+# Tup, Sup, Sdown, 
+
+
+
+
+# K to half-max 
 
 
 
