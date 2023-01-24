@@ -122,7 +122,7 @@ make_exp_details = function(folder_name, samplesheet) {
 
 
 #needs to be run once
-map(folders[1:length(folders)], make_exp_details, samplesheet = "EE_GAP1_ArchMuts_2021.csv")
+map(folders[2:length(folders)], make_exp_details, samplesheet = "EE_GAP1_ArchMuts_2021.csv")
 #map(sample_folders[1:length(sample_folders)], make_exp_details, samplesheet = "EE_GAP1_ArchMuts_2021.csv")
 
 # NOTE!!!:Skip Step 2-4 if you already have a gating template and want to apply it to data. Proceed to Step 5.
@@ -610,14 +610,21 @@ freq_and_counts =
   relocate(2:3, .after = Gate) %>%
   relocate(9, .after = Frequency)
 
-freq_and_counts %>%
-  filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
+WT_df = freq_and_counts %>% 
+  #filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
   filter(Description == "GAP1 WT architecture") %>% 
   filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>% 
-  select(sample, generation, Gate, Frequency, Description) %>%
+  filter(Count>60000) %>%
+  select(sample, generation, Gate, Count, Frequency, Description) %>%
   arrange(generation, sample) %>%
-  select(!Gate) %>%
-  write_csv("propCNV_gap1_WT_sbi.csv")
+  select(!Gate)# %>%
+  write_csv("propCNV_gap1_WT_freq_and_count_60kcells.csv")
+  #  write_csv("propCNV_gap1_WT_sbi_60kcells.csv")
+
+ggplot(df, aes(generation, Frequency, color = sample))+
+  geom_point()+
+  geom_line()+
+  theme_classic()
 
 
 # LTR KO - remove population LTR_2 for sbi as well as for other CNV dynamics analysis 
@@ -639,9 +646,9 @@ LTR =
   filter(Description == "GAP1 LTR KO") %>% 
   filter(!sample == "gap1_ltr_2")  %>% 
   filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>% 
-  select(sample, generation, Gate, Frequency, Description) %>%
+  select(sample, generation, Gate, Count, Frequency, Description) %>%
   arrange(generation, sample) %>%
-  select(!Gate) %>%
+  select(!Gate) #%>%
   write_csv("propCNV_gap1_LTRKO_sbi.csv")
 
 # ARS KO
@@ -659,14 +666,12 @@ freq_and_counts =
 
 ARS = freq_and_counts %>%
   filter(Count>70000) %>% 
-  filter(Description == "GAP1 ARS KO") %>% distinct(generation)
+  filter(Description == "GAP1 ARS KO") %>% #distinct(generation)
   filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>%
-  select(sample, generation, Gate, Frequency, Description) %>%
+  select(sample, generation, Gate, Count, Frequency, Description) %>%
   arrange(generation, sample) %>% 
   select(!Gate) #%>%
 #  write_csv("propCNV_gap1_arsko_sbi.csv")
-
-
 
 # ALL KO
 freq = read_csv(paste0("05_ALL_121522_freq_all_timepoints.csv")) #Do not use T03, use T05 
@@ -681,16 +686,17 @@ freq_and_counts =
   relocate(2:3, .after = Gate) %>%
   relocate(9, .after = Frequency)
 
-freq_and_counts %>%
+ALL = freq_and_counts %>%
   filter(Count>70000) %>% # exclude any well/timepoint with less than 70,000 single cells
   filter(Description == "GAP1 LTR + ARS KO") %>%
   filter(generation <= 116, Type == "Experimental", Gate == "two_or_more_copy") %>%
-  select(sample, generation, Gate, Frequency, Description) %>%
+  select(sample, generation, Gate, Count, Frequency, Description) %>%
   arrange(generation, sample) %>%
-  select(!Gate) %>%
+  select(!Gate) # %>%
   write_csv("propCNV_gap1_allko_sbi.csv")
 
-
+SBI_input = bind_rows(WT_df,LTR, ARS, ALL) 
+SBI_input %>% write_csv("SBI_input_011723.csv")
 ####### Merge all experimental for each 4 genotypes into one dataframe with no filtering ####### 
 
 # Wildtype architecture

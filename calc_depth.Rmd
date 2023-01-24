@@ -1,0 +1,71 @@
+---
+title: "Get median read depth across samples from wgs run"
+author: Julie Chuong
+date: 08-25-22
+output: html_notebook
+---
+
+outputted the _coverage.txt files from samtools
+
+import these files. they are tab delimited. 
+
+mean depth column is third from the last
+grab that column
+calculate the median of the mean depth per strain
+write it in a table 
+
+
+```{r setup}
+require("knitr")
+opts_knit$set(root.dir = "~/Documents/cloneseq1/coverage_files")
+```
+
+```{r}
+library(tidyverse)
+library(docstring)
+```
+
+We should have 96 files because we sequenced 96 samples
+```{r}
+files = list.files()
+names = substr(files, 1, 4) 
+```
+
+Function that imports the coverage file 
+Returns the median of mean depth per chromosome 
+```{r}
+get_depth = function(files){
+covfile = read.delim(files)
+median_depth=median(covfile$meandepth)
+name=substr(files, 1, 4) 
+row=tibble_row(name,median_depth)
+return(row)
+}
+```
+
+Apply this function on all files using map()
+Convert the resulting list to a dataframe
+```{r}
+all_depths = map(files, get_depth)
+all_depths = do.call(rbind.data.frame, all_depths)
+```
+
+```{r}
+write_csv(all_depths, file = "../median_depth_across_genome_per_sample.csv")
+```
+
+Run whole chunk at once in order to write this pdf 
+```{r}
+pdf(file = "../median_depth_boxplot.pdf") 
+
+boxplot(all_depths$median_depth,
+  ylab = "Median Read Depth of Genome",
+  main = "Whole Genome Sequencing of 96 samples",
+  sub = "Nextseq 500 (2 x 150) MidOutput Run.
+  Received only 58% of expected reads.")
+
+dev.off() 
+
+```
+
+

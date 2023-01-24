@@ -64,7 +64,41 @@ chromoMap(list(chrXI_zoom),
           data_type = "categorical",
           data_colors = list(c("#FFC20A", "#5887FF","#999933","#e26d5c")))
 
-1.#FFC20A"
-2. "#5887FF"
-3. "#e26d5c",
-4 "#e26d5c",
+#1. #FFC20A"
+#2. "#5887FF"
+#3. "#e26d5c",
+#4 "#e26d5c",
+
+#### Make a chromosome from 443000 to telomere right. 
+sort(clonedata$start)  # 443000 
+sort(clonedata$end) #670191 
+
+f3_feats=my_feats[31:50, ] #from centromere ~440 to telomere R 670
+f3_feats %>% View()
+f3_coords = data.frame(name = "XI", 
+                                    start = 440129, 
+                                    end = 666816)
+colnames(f3_coords)<-NULL
+fig3_chromo = chromoMap(list(f3_coords),
+                        list(f3_feats),
+                        chr_width = 15,
+                        chr_length = 4,
+                        labels = T,
+                        chr_color = c("#ede0d4"),
+                        data_based_color_map = T,
+                        data_type = "categorical",
+                        legend = T,
+                        data_colors = list(c("#81211f", "#e26d5c", "#5887FF","#FFC20A", "#999933", "Black")) #red-centromoere, ARS, LTR, tRNA, GAP1 ORF.
+                       
+                        )
+fig3_chromo
+#"red", "#e26d5c", "#5887FF","#FFC20A", "#999933",
+#centromoere, ARS, LTR, tRNA, GAP1 ORF, empty 
+#"red", "#e26d5c", "#5887FF","#999933","#FFC20A",
+#"red", "#e26d5c", "#5887FF","#999933","black","black" 
+
+##81211f" burgundy/brownish-red
+# FFC20A = tRNA, yellow
+#"#999933" = GAP1 ORF olive
+#55C1FF - ltr purple
+#ltr blue #6699cc

@@ -261,18 +261,16 @@ Sup_anova = aov(slope~Description, data = Sup)
 summary(Sup_anova)
 
 
-
-#### Calculate Tdown
+#### Calculate Tdown ####
 
 # No need to do this because only a few pops exhibit CNV loss, so it doesn't merit a whole figure.
 # Mention it in the text
-
-##### Calculate Sdown
+ 
+##### Calculate Sdown ####
 
 # No need to do this because only a few pops exhibit CNV loss, so it doesn't merit a whole figure
 
-
-#### Calculate, Tmax, early generation of the CNV maintenance phase, the other inflection point where the line goes flat (horizontal)
+#### Calculate, Tmaint, early generation of the CNV maintenance phase, the other inflection point where the line goes flat (horizontal) ####
 # ie) what generation gives lowest slope values for a consecutive 4 timepoints .. 
 gen_maint = slopes %>% 
   right_join(meta) %>%
@@ -311,9 +309,18 @@ ggsave("Tmaint_boxplot.pdf", bg = "#FFFFFF", height = 3, width = 4)
 hist(gen_maint$gen_start)
 shapiro.test(gen_maint$gen_start) #normal
 
-#### Calculate max percent of CNVs maintained per population
+summary(aov(gen_start~Description, gen_maint))
+# pval = 0.00833
+
+
+
+#### Calculate max percent of CNVs maintained per population ####
 
 #don't need to do this...as you can easily see this from Figure 2A, median proportion CNV over time.
+
+#### export table ### 
+
+
 
 #### Calculate Area under the curve #####
 # which tells us total CNVs accumulated throughout the timecourse? 
