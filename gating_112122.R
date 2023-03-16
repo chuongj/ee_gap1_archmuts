@@ -16,7 +16,7 @@ library(tidyverse)
 library(ggridges)
 library(docstring)
 
-setwd("/Volumes/GoogleDrive/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/data/Summer_LTEE_2021_FCS_files")  #Julie's WD
+setwd("/Users/juliechuong/Library/CloudStorage/GoogleDrive-jc10007@nyu.edu/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/data/Summer_LTEE_2021_FCS_files")  #Julie's WD
 
 ##### Find timepoint with lowest median normalized GFP for each of the 4 genotypes ####
 
@@ -39,7 +39,7 @@ medianGFP = read_csv("min-median-norm-GFP_112222.csv")
 
 #In addition to having directories (one to many) containing data FSC files, make a gating directory, which is **ONE** directory that contains ALL the FSC files you want to overlay for drawing gates. Read in the names of those directories (data directories and one gating directory) here:
 folders = list.dirs()[c(9:36)] #select the FSC file folders in your directory
-folders = folders[c(-3,-5,-7,-9)]
+folders = folders[c(-3,-5,-7,-9, -10, -15)]
 
 # Choose a name to be used for all output files including the gating template and associated flow data and graphs.
 
@@ -415,16 +415,18 @@ list.files(path = ".", pattern = paste0(version_name,"_freq_([0-9])+_EE_GAP1_Arc
 #Author: Grace & Julie
 
 # read in frequency csv, cell numbers csvs, single cell distributions for all timepoints
-freq = read_csv(paste0(version_name,"_freq_all_timepoints.csv"))
-count= read_csv(paste0(version_name,"_counts_all_timepoints.csv"))
-
-freq = read_csv("02_WT_112222_freq_all_timepoints.csv")
-count = read_csv("02_WT_112222_counts_all_timepoints.csv")
-
-freq = read_csv("04_LTR_112222_freq_all_timepoints.csv")
-count = read_csv("04_LTR_112222_counts_all_timepoints.csv")
+# freq = read_csv(paste0(version_name,"_freq_all_timepoints.csv"))
+# count= read_csv(paste0(version_name,"_counts_all_timepoints.csv"))
+# 
+# freq = read_csv("02_WT_112222_freq_all_timepoints.csv")
+# count = read_csv("02_WT_112222_counts_all_timepoints.csv")
+# 
+# freq = read_csv("04_LTR_112222_freq_all_timepoints.csv")
+# count = read_csv("04_LTR_112222_counts_all_timepoints.csv")
 
 #sc_distr_alltimepoints <- read.csv(paste0(version_name,"_SingleCellDistributions_all_timepoints.csv", stringsAsFactors = T)) %>% mutate(generation = factor(generation, levels = unique(generation)))
+
+freq_and_counts = read_csv("freq_and_counts_merged_CLEAN_121622.csv")
 
 freq_and_counts =
   count %>% filter(Gate == "Single_cells") %>%
@@ -488,9 +490,9 @@ freq_and_counts %>%
   scale_x_continuous(breaks=seq(0,250,50)) +
   theme(text = element_text(size=12))
 
-ggsave(paste0("propCNV_",version_name,"_controls_8x12.pdf"), bg = "#FFFFFF", height = 8, width = 12)
-ggsave(paste0("propCNV_",version_name,"_controls_8x12.png"), bg = "#FFFFFF", height = 8, width = 12)
-ggsave(paste0("propCNV_",version_name,"_controls_10x14.pdf"), bg = "#FFFFFF", height = 10, width = 14)
+# ggsave(paste0("propCNV_",version_name,"_controls_8x12.pdf"), bg = "#FFFFFF", height = 8, width = 12)
+# ggsave(paste0("propCNV_",version_name,"_controls_8x12.png"), bg = "#FFFFFF", height = 8, width = 12)
+# ggsave(paste0("propCNV_",version_name,"_controls_10x14.pdf"), bg = "#FFFFFF", height = 10, width = 14)
 
 # plot proportion of population in each gate over time for each of 28 experimental populations
 prop_plot_list = list()
@@ -518,8 +520,8 @@ prop_plot_list$`GAP1 ARS KO`
 prop_plot_list$`GAP1 LTR KO`
 prop_plot_list$`GAP1 LTR + ARS KO`
 
-ggsave(paste0("propCNV_WTs_",version_name,"_8x12.pdf"), bg = "#FFFFFF", height = 8, width = 12)
-ggsave(paste0("propCNV_Wts_",version_name,"_8x12.png"), bg = "#FFFFFF", height = 8, width = 12)
+# ggsave(paste0("propCNV_WTs_",version_name,"_8x12.pdf"), bg = "#FFFFFF", height = 8, width = 12)
+# ggsave(paste0("propCNV_Wts_",version_name,"_8x12.png"), bg = "#FFFFFF", height = 8, width = 12)
 ### Plot proportion of the population with a CNV over time
 
 my_facet_names <- as_labeller(c("GAP1 WT architecture" = "Wildtype architecture",
@@ -559,8 +561,9 @@ propCNV = freq_and_counts %>%
   ggplot(aes(generation, Frequency, color = sample)) +
   geom_line(size = 2.5) +
   #geom_point()+
-  facet_wrap(~factor(Description,
-                     levels = c("GAP1 WT architecture","GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")), labeller = my_facet_names, scales='free') +
+  # facet_wrap(~factor(Description,
+  #                    levels = c("GAP1 WT architecture","GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")), labeller = my_facet_names, scales='free') +
+  facet_wrap(~sample) +
   xlab("Generation") +
   ylab("Proportion of cells with GAP1 amplifications") +
   scale_color_manual(values = c(wtGrays, allGolds,arsSalmons, ltrBlues)) +
@@ -578,10 +581,49 @@ propCNV = freq_and_counts %>%
   )
 propCNV
 
-ggsave(paste0("propCNV_",version_name,"_112122_8x12.pdf"), bg = "#FFFFFF", height = 8, width = 12)
-ggsave(paste0("propCNV_",version_name,"_112122_10x14.pdf"), bg = "#FFFFFF", height = 10, width = 14)
-ggsave(paste0("propCNV_",version_name,"_112122_8x12.png"), bg = "#FFFFFF", height = 8, width = 12)
-ggsave(paste0("propCNV_",version_name,"_112122_10x14.png"), bg = "#FFFFFF", height = 10, width = 14)
+# ggsave(paste0("propCNV_",version_name,"_112122_8x12.pdf"), bg = "#FFFFFF", height = 8, width = 12)
+# ggsave(paste0("propCNV_",version_name,"_112122_10x14.pdf"), bg = "#FFFFFF", height = 10, width = 14)
+# ggsave(paste0("propCNV_",version_name,"_112122_8x12.png"), bg = "#FFFFFF", height = 8, width = 12)
+# ggsave(paste0("propCNV_",version_name,"_112122_10x14.png"), bg = "#FFFFFF", height = 10, width = 14)
+
+##############
+# Lineplots per populations
+pop_lineplot = freq_and_counts %>%
+  filter(Count>70000,
+         generation <= 203) %>%
+  filter(Gate %in% c("two_or_more_copy"), Type == "Experimental") %>%
+  anti_join(fail_ctrls)  %>% #remove contaminated and outliers informed by population ridgeplots (above) and fluor lineplots (below)
+  dplyr::filter(!(Description == "1 copy control" & generation == 182 |
+                    Description == "2 copy control" & generation == 79 |
+                    Description == "2 copy control" & generation == 95 |
+                    Description == "2 copy control" & generation == 108 |
+                    Description == "2 copy control" & generation == 116)) %>% #exclude these controls timepoints that look weird on ridgeplots
+  ggplot(aes(generation, Frequency, color = sample)) +
+  geom_line(size = 2.5) +
+  #geom_point()+
+  # facet_wrap(~factor(Description,
+  #                    levels = c("GAP1 WT architecture","GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")), labeller = my_facet_names, scales='free') +
+  facet_wrap(~sample) +
+  xlab("Generation") +
+  ylab("Proportion of cells with GAP1 amplifications") +
+  scale_color_manual(values = c(wtGrays, allGolds,arsSalmons, ltrBlues)) +
+  theme_classic() +
+  #scale_x_continuous(breaks=seq(0,250,50)) +
+  scale_x_continuous(breaks=seq(0,203,50)) +
+  scale_y_continuous(limits=c(0,100)) +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        text = element_text(size=25),
+        legend.position = "none",
+        axis.text.x = element_text(size = 12, color = "black"), #edit x-tick labels
+        axis.text.y = element_text(size = 30, color = "black"),
+        strip.background = element_blank(), #removed box around facet title
+        strip.text = element_text(size=25)
+  )
+
+pop_lineplot
+
+# ggsave(paste0("propCNV_pop_020623_10x14.pdf"), bg = "#FFFFFF", height = 10, width = 14)
+
 
 ##############
 # Now that we have made gates for based on the lowest median normalized GFP timepoint
@@ -847,10 +889,13 @@ clean_freq_and_counts = freq_and_counts %>%
   filter(Gate %in% c("two_or_more_copy"), Type == "Experimental") %>%
   anti_join(weird_tp)
 
-clean_freq_and_counts %>% write_csv("freq_and_counts_merged_CLEAN_121622.csv")
+# clean_freq_and_counts %>% write_csv("freq_and_counts_merged_CLEAN_121622.csv")
+# clean_freq_and_counts = read_csv("freq_and_counts_merged_CLEAN_121622.csv")
 
-ggsave("propCNVpop_clean_121622.pdf", bg = "#FFFFFF", height = 8, width = 12)
-ggsave("propCNVpop_clean_121622.png", bg = "#FFFFFF", height = 8, width = 12)
+# ggsave("propCNVpop_clean_121622.pdf", bg = "#FFFFFF", height = 8, width = 12)
+# ggsave("propCNVpop_clean_121622.png", bg = "#FFFFFF", height = 8, width = 12)
+#### Make population lineplots - in color 
+clean_freq_and_counts 
 
 #### The medians of populations for each genotype on a single plot ####
 
