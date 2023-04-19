@@ -41,7 +41,7 @@ chromoMap(list(chrXI),
           y_chr_scale = 17, #bring ruler closer to chromosome 
           data_based_color_map = T,
           data_type = "categorical",
-          data_colors = list(c("#FFC20A", "#e26d5c", "#5887FF", "#ede0d4","#999933", "black"))) # tRNA, ars, ltr, centromere, GAP1 ORF, telomere
+          data_colors = list(c("#FFC20A", "#e26d5c", "#5887FF", "#ede0d4","white", "black"))) # tRNA, ars, ltr, centromere, GAP1 ORF, telomere
  #unique(my_feats[,5]) 
 # FFC20A = tRNA, yellow
 #"#999933" = GAP1 ORF olive
@@ -62,7 +62,7 @@ chromoMap(list(chrXI_zoom),
           chr_color = c("#ede0d4"),
           data_based_color_map = T,
           data_type = "categorical",
-          data_colors = list(c("#FFC20A", "#5887FF","#999933","#e26d5c")))
+          data_colors = list(c("#FFC20A", "#5887FF","white","#e26d5c")))
 
 #1. #FFC20A"
 #2. "#5887FF"
@@ -88,10 +88,32 @@ fig3_chromo = chromoMap(list(f3_coords),
                         data_based_color_map = T,
                         data_type = "categorical",
                         legend = T,
-                        data_colors = list(c("#81211f", "#e26d5c", "#5887FF","#FFC20A", "#999933", "Black")) #red-centromoere, ARS, LTR, tRNA, GAP1 ORF.
+                        data_colors = list(c("#81211f", "#e26d5c", "#5887FF","#FFC20A", "white", "Black")) #red-centromoere, ARS, LTR, tRNA, GAP1 ORF.
                        
                         )
 fig3_chromo
+
+
+g79_feats = my_feats[29:50, ]
+g79_feats %>% View()
+g79_df = data.frame(name = "XI", 
+                       start = 389264, 
+                       end = 666816)
+colnames(g79_df)<-NULL
+g79_chromo = chromoMap(list(g79_df),
+                        list(g79_feats),
+                        chr_width = 20,
+                        chr_length = 4,
+                        labels = T,
+                        chr_color = c("#ede0d4"),
+                        data_based_color_map = T,
+                        data_type = "categorical",
+                        legend = T,
+                        data_colors = list(c("#e26d5c","#81211f","#5887FF","#FFC20A", "white", "Black")) #red-centromoere, ARS, LTR, tRNA, GAP1 ORF.
+                        
+)
+g79_chromo
+
 #"red", "#e26d5c", "#5887FF","#FFC20A", "#999933",
 #centromoere, ARS, LTR, tRNA, GAP1 ORF, empty 
 #"red", "#e26d5c", "#5887FF","#999933","#FFC20A",
