@@ -1,7 +1,12 @@
 ##### Merge Cloneseq 0, 1, 2 CNV breakpoint + GAP1 Copy Number data frames #####
 ##### Remove duplicate clones (possibly not from unique lineages) ######
 # Duplicate Clones (NON-Unique Clones) defined as if BOTH their start and ends points are within a 1000bp range of each other 
-clonedata = read_csv("~Lab_docs/cloneseq1_temp/cloneseq0and1_Breaks_Copies.csv")
+library(tidyverse)
+library(ggalt)
+library(gridExtra)
+
+
+clonedata = read_csv("~/Lab_docs/cloneseq1_temp/cloneseq0and1_Breaks_Copies.csv")
 breaks = read_csv("~/Lab_docs/cloneseq2_temp/cloneseq2_rd_Breakpoints_Copies.csv")
 
 all_clones = bind_rows(clonedata,breaks)
@@ -268,7 +273,7 @@ duplicated_clones<-c(2686,2687,2689,2850,2851,2926,
                      3071,3073,3074,3075,2993,2995,3078,3079,2997,3085,3091,3095)
 
 new = all_clones %>% dplyr::filter(!sample %in% duplicated_clones)
-
+ 
 #add back the aneuploidy clones
 aneu = read_csv("/Users/juliechuong/Lab_docs/cloneseq1_temp/cloneseq1_rd_Breakpoints_Copies.csv")
 aneu = aneu %>% 
@@ -276,25 +281,21 @@ aneu = aneu %>%
 new = rbind(new, aneu)
 
 ######### Plot amplified region #######
-library(ggalt)
-library(gridExtra)
 quartz()
   new %>%  
-  filter(generation == 79) %>% 
-#  filter(generation == 125) %>%     
+#  filter(generation == 79) %>% 
+  filter(generation == 125) %>%     
 #  filter(gap1_rounded>1, start !=1)%>% #filter out aneuploidies 
   filter(gap1_rounded>1) %>% #keep aneuploidy
   arrange(factor(Description, levels = rev(c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"))), 
-#          desc(gap1_rounded),
-          desc(cnv_length)) %>% #custom reorder by genotype, and then arrange copy number low to high 
+          desc(cnv_length)) %>%  #custom reorder by genotype, and cnv lenght low to high
   mutate(clone = factor(sample, levels = unique(sample))) %>% #reorder strain order %>%
   mutate(pop_name = factor(pop_name)) %>%
   ggplot(aes(x = start, xend=end, y = clone, color = Description))+
-#  geom_dumbbell(size=3, dot_guide=TRUE, dot_guide_size=0.25)+  
-  geom_dumbbell(size=2, dot_guide=TRUE, dot_guide_size=0.15)+
+  geom_dumbbell(size=2, dot_guide=TRUE, dot_guide_size=0.15) +
   scale_color_manual(#values = c(arsSalmons[1], allGolds[1],ltrBlues[1],wtGrays[3]), #custom colors
-                     values = c(wtGrays[3], allGolds[1], ltrBlues[1], arsSalmons[1]),
-                     limits = c("Wildtype architecture", "LTR and ARS KO","LTR KO","ARS KO"   ),
+                     values = c(wtGrays[3], ltrBlues[1], arsSalmons[1], allGolds[1]),
+                     limits = c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"),
                      labels = c("Wildtype architecture", "LTR removed","ARS removed","LTR and ARS removed"))+ #third, now you can change legend labels
   scale_x_discrete(expand=c(0,1),
                   # limits=c(400000,670000),
@@ -304,7 +305,7 @@ quartz()
                     # limits=c(400000,670000),
                      labels = function(l) {trans = l / 1000},"Position on Chromosome XI (kb)")+ #breaks = scales::pretty_breaks(n=4)
   #scale_y_discrete(limits=rev)+
-  labs(x = "Position on Chromosome XI", y= "Clone ID") +
+  labs(x = "Position on Chromosome XI", y= "Clone") +
   # facet_grid(gap1_rounded ~ ., space = "fixed")+
   theme_bw()+
   theme(panel.background = element_rect(fill='transparent'), #transparent panel bg
@@ -312,11 +313,12 @@ quartz()
         strip.text.x = element_text(size = 12), #facet font size
         strip.background = element_rect(fill = "white"),
         axis.text.x = element_text(size = 12, color = "black"),
-        axis.text.y = element_text(size = 8, color = "black"),
+    #    axis.text.y = element_text(size = 8, color = "black"),  #Clone ID Names
+    axis.text.y = element_blank(),
         axis.title = element_text(size = 12, color = "black"),
         legend.title = element_text(size = 12, color = "black"),
         legend.text=element_text(size=12, color = "black"),
-        legend.position = "none"
+      #  legend.position = "none"
   )+
   guides(color = guide_legend(title = "Genotype"))
   
@@ -339,6 +341,9 @@ ggsave(filename = "cloneseq0_1_2_g79_dumbbell_plot_041823_CnvLength_noLegend_ANE
 ggsave(filename = "cloneseq0_1_2_g79_dumbbell_plot_041823_CnvLength_noLegend_noAeu.png", width = 12, height = 7, bg = "white")
 ggsave(filename = "cloneseq0_1_2_g125_dumbbell_plot_041823_CnvLength_noLegend_ANEU_WIDE.png", width = 20, height = 7, bg = "white")
 ggsave(filename = "cloneseq0_1_2_g125_dumbbell_plot_041823_CnvLength_noLegend_noAeu.png", width = 12, height = 7, bg = "white")
+
+ggsave(filename = "cloneseq0_1_2_g79_dumbbell_042523_ANEU_Legend.png", width = 20, height = 7, bg = "white")
+ggsave(filename = "cloneseq0_1_2_g125_dumbbell_042523_ANEU_Legend.png", width = 20, height = 7, bg = "white")
 
 ##### Barplot for GAP1 Copy Number
 ### Barplot grouped by genotype, then sort by copy number low to high ####
