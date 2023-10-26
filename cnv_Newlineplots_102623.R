@@ -1,11 +1,10 @@
 # Forked from gating_112122.R
 # making new CNV lineplots because the 4 wildtype lines are under-reporting GAP1 CNVs due to broken CNV reporter subpop
+# Make the order of lines showing up: Wildtype, ARS removed, LTRs removed, LTR and ARS removed. 
 
 # Load required packages
-library(CytoExploreR)
 library(tidyverse)
-library(ggridges)
-library(docstring)
+library(plotly)
 
 setwd("/Users/juliechuong/Library/CloudStorage/GoogleDrive-jc10007@nyu.edu/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/data/Summer_LTEE_2021_FCS_files")  #Julie's WD
 
@@ -37,7 +36,7 @@ propCNV = freq_and_counts %>%
                 ) %>%
 #exclude these controls timepoints that look weird on ridgeplots
   ggplot(aes(generation, proportion, color = sample)) +
-  geom_line(size = 2.5) +
+  geom_line(linewidth = 2.5) +
   #geom_point()+
   facet_wrap(~factor(Description,
                      levels = c("GAP1 WT architecture","GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")), labeller = my_facet_names, scales='free') +
@@ -111,6 +110,7 @@ median_cl_boot <- function(x, conf = 0.95) {
                                                                           uconf))
 }
 
+#### Median CNV lineplots ####
 quartz()
 freq_and_counts %>%
   mutate(proportion = Frequency/100) %>%
@@ -123,7 +123,7 @@ freq_and_counts %>%
   mutate(Description = factor(Description, levels=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")))%>%
   group_by(generation, Description) %>%
   mutate(med = median(Frequency)) %>% #calculate the medians per genotype per timepoint
-  dplyr::filter(Description %in% c("GAP1 WT architecture","GAP1 LTR KO", "GAP1 ARS KO")) %>%
+  dplyr::filter(Description %in% c("GAP1 WT architecture", "GAP1 ARS KO")) %>%
 #  dplyr::filter(Description %in% c("GAP1 WT architecture","GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")) %>%
 #  dplyr::filter(Description == c("GAP1 WT architecture")) %>% #choose which genotypes to plot
   ggplot(aes(generation, med, color = Description)) +
@@ -156,5 +156,59 @@ ggsave(paste0("medianPropCNV_WT_080223_8x16.png"), bg = "#FFFFFF", height = 8, w
 ggsave(paste0("medianPropCNV_WT+LTR_080223_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
 ggsave(paste0("medianPropCNV_WT+LTR+ARS_080223_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
 
+ggsave(paste0("medianPropCNV_WT+ARS_102623_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
 
+
+#### 10/26/23 add the alpha-fade to lineplots because people always ask what the variance is between populations ####
+# https://plotly.com/r/line-charts/ 
+# Plotly resource Pieter showed me! Also called filled line charts 
+
+med_freq_counts = freq_and_counts %>%
+  mutate(proportion = Frequency/100) %>%
+  dplyr::filter(generation <= 203) %>%
+  dplyr::filter(!(sample == "gap1_1"  |
+                    sample == "gap1_2" |
+                    sample == "gap1_4" |
+                    sample == "gap1_5")
+  ) %>%
+  mutate(Description = factor(Description, levels=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")))%>%
+  group_by(generation, Description) %>%
+  mutate(med = median(Frequency))
+
+ltrko = med_freq_counts %>% dplyr::filter(Description == "GAP1 LTR KO")
+
+# get lows and highs (min and max per timepoint)
+low = ltrko %>% group_by(generation) %>% summarize(mins = min(Frequency))
+high = ltrko %>% group_by(generation) %>% summarize(maxs = max(Frequency))
+medians = ltrko %>% group_by(generation) %>% summarise(median = max(med))
+                                    
+fig = plot_ly(high, x = ~generation, y = high$maxs, type = 'scatter', mode = 'lines', line = list(color = 'transparent'), showlegend = FALSE, name = "High")
+fig
+fig = fig %>% add_trace(y= ~low$mins, type = 'scatter', mode = 'lines',
+                         fill = 'tonexty', fillcolor = 'rgba(203, 221, 239,0.6)', line = list(color = 'transparent'), showlegend = FALSE, name = "Low")   ##CBDDEF  #BBD3EA # color='#CBDDEF', #RGBA the 4th number is the opacity! 
+fig
+fig <- fig %>% add_trace(x = ~generation, y = medians$median, type = 'scatter', mode = 'lines',
+                         line = list(color='#6699cc', width = 5),
+                         name = 'LTR removed') 
+
+fig <- fig %>% layout(paper_bgcolor='white', plot_bgcolor='white',
+                      xaxis = list(title = "Generation",
+                                 
+                                   showgrid = TRUE,
+                                   showline = TRUE,
+                                   showticklabels = TRUE,
+                                   tickcolor = 'rgb(127,127,127)',
+                                   ticks = 'outside',
+                                   zeroline = TRUE),
+                      yaxis = list(title = "Median percent of cells with GAP1 CNV",
+                                   
+                                   showgrid = TRUE,
+                                   showline = TRUE,
+                                   showticklabels = TRUE,
+                                   tickcolor = 'rgb(127,127,127)',
+                                   ticks = 'outside',
+                                   zeroline = FALSE))
+fig
+
+ggsave(paste0("medianCNV_fade_LTR_102623_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
 
