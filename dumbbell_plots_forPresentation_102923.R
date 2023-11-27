@@ -43,22 +43,22 @@ ltr_color = "#6699cc"
 ###
 
 # import clone data
-clonedata = read_csv("cloneseq0and1_Breaks_Copies.csv")
+all_clonedata = read_csv("cloneseq0and1_Breaks_Copies.csv")
 
 # subset clones of interest
-clonedata = clonedata %>% filter(sample %in% c(2694, 2697, 2839, 2843, 2927, 2929, 
+clonedata = all_clonedata %>% filter(sample %in% c(2694, 2697, 2839, 2843, 2927, 2929, 
                                    2691, 2852, 2854, 2855, 2945, 2946, 2948,
                                    2682, 2684, 2685, 2687, 2689, 2849, 
                                    2676, 2677, 2678, 2681, 2680))
 
 #### Dumbbell Plot - Grouped by Genotype  ####
 db_geno=
-  clonedata %>%
+  all_clonedata %>%
   filter(gap1_rounded>1)%>%
   arrange(factor(Description, levels = rev(c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"))), desc(gap1_rounded), desc(cnv_length)) %>% #reorder genotype custom order, and then arrange copy number low to high
   mutate(clone = factor(sample, levels = unique(sample))) %>% #reorder strain order %>%
   ggplot(aes(x = start, xend=end, y = clone, color = Description))+
-  geom_dumbbell(size=8, dot_guide=TRUE, dot_guide_size=0.25)+
+  geom_dumbbell(size=3, dot_guide=TRUE, dot_guide_size=0.25)+
   scale_color_manual(values = c(wt_color,ltr_color,ars_color,all_color), #custom colors
                      limits = c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"), #second, change order of legend items, by listing in the order you want em. using the real names in the aes(color =  ) argument
                      labels = c("Wildtype architecture","LTR removed", "ARS removed","LTR and ARS removed") #third, now you can change legend labels
@@ -75,7 +75,7 @@ db_geno=
   theme(panel.background = element_rect(fill='transparent'), #transparent panel bg
         plot.background = element_rect(fill='transparent', color=NA), #transparent plot bg
         axis.text.x = element_text(size = 36, color = "black"),
-        axis.text.y= element_blank(),
+        #axis.text.y= element_blank(),
         axis.title = element_text(size = 30, color = "black"),
         legend.title = element_text(size = 30, color = "black"),
         legend.text=element_text(size=30, color = "black"),
@@ -86,11 +86,15 @@ db_geno=
   #facet_grid(~gap1_rounded)
 db_geno
 
-ggsave(filename = "selectClones_dumbbell_plot_102923.png", width = 8, height = 10, bg = "white")
-ggsave(filename = "selectClones_dumbbell_plot_102923.pdf", width = 8, height = 10, bg = "white") 
+ggsave("all_clones0and1_103123.png", width = 8, height = 10, bg = "white")
+ggsave("all_clones0and1_103123.pdf", width = 8, height = 10, bg = "white")
+ # ggsave(filename = "selectClones_dumbbell_plot_102923.png", width = 8, height = 10, bg = "white")
+# ggsave(filename = "selectClones_dumbbell_plot_102923.pdf", width = 8, height = 10, bg = "white") 
 
 # Make dumbbell plot VERSION 2 
 # Include aneuploidy clones and zoom into 400-660kb region
+# Try this to zoom into plot without removing data 
+# https://www.geeksforgeeks.org/zoom-into-ggplot2-plot-without-removing-data-in-r/?ref=ml_lbp 
 plot2 = 
   clonedata %>%
   filter(gap1_rounded>1) %>%

@@ -823,8 +823,8 @@ freq_and_counts = read_csv("freq_and_counts_121622_MERGED_Experimentals_noContro
 quartz()
 #freq_and_counts %>%
 clean_freq_and_counts %>%
-  filter(Count>70000,
-         generation <= 203) %>%
+  filter(Count>70000) %>%
+#         generation <= 203) %>%
   filter(Gate %in% c("two_or_more_copy"), Type == "Experimental") %>%
   ggplot(aes(generation, Frequency, color = sample)) +
   geom_line(size = 2.5) +
