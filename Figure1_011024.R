@@ -8,6 +8,9 @@
 # it's best to keep them in my own population dynamics and just explain it in the text. 
 # Also, having more than 1 wildtype population lets me do pairwise t-tests. 
 
+# Suggestions were to show dotted lines for each rep with the median line as
+# the thick filled line.Reduce the 
+
 # Load required packages
 library(tidyverse)
 library(plotly)
@@ -23,7 +26,8 @@ freq_and_counts = read_csv("freq_and_counts_merged_CLEAN_121622.csv")
 # Plotly resource Pieter showed me! Also called filled line charts 
 med_freq_counts = freq_and_counts %>%
   mutate(proportion = Frequency/100) %>%
-  dplyr::filter(generation <= 203) %>%
+  #dplyr::filter(generation <= 203) %>%
+  dplyr::filter(generation <= 166) %>%
   mutate(Description = factor(Description, levels=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO")))%>%
   group_by(generation, Description) %>%
   mutate(med = median(Frequency))
@@ -48,11 +52,13 @@ alllow = allko %>% group_by(generation) %>% summarise(mins = min(Frequency)/100)
 allhigh = allko %>% group_by(generation) %>% summarise(maxs = max(Frequency)/100)
 allMedian = allko %>% group_by(generation) %>% summarise(median = max(med)/100)
 
+#######Plotly alpha-fade on ranges between replicates #################### 
 #graph median line for Wildtype architecture and faded range for repeat evolutions (n = 5)
 fig = plot_ly(wtHigh, x = wtHigh$generation, y = wtHigh$maxs, type = 'scatter', mode = 'lines', line = list(color = 'transparent'), showlegend = FALSE, name = "WT maxs") %>%
-  add_trace(y=~wtLow$mins, type = 'scatter', mode = 'lines', fill = 'tonexty', fillcolor = 'lightgray',line = list(color = 'transparent'), showlegend = FALSE, name = "WT mins") %>%
+  add_trace(y=~wtLow$mins, type = 'scatter', mode = 'lines', fill = 'tonexty', fillcolor = 'darkgray',line = list(color = 'transparent'), showlegend = FALSE, name = "WT mins")
   #tonexty is fills to next y (shades under y)
-  add_trace(x=wtMeds$generation, y=wtMeds$median, type = 'scatter', mode = 'lines', line = list(color = 'black', width = 10), showlegend = FALSE, name = "Wildtype architecture")%>%
+fig  
+fig = fig %>% add_trace(x=wtMeds$generation, y=wtMeds$median, type = 'scatter', mode = 'lines', line = list(color = 'black', width = 10), showlegend = FALSE, name = "Wildtype architecture")%>%
   layout(paper_bgcolor='white', plot_bgcolor='white',
                       xaxis = list(
                         title = list(text="Generation",
@@ -82,12 +88,12 @@ fig = plot_ly(wtHigh, x = wtHigh$generation, y = wtHigh$maxs, type = 'scatter', 
                         zeroline = FALSE))
 fig
 #save Wildtype only plot
-save_image(fig, file = "propCNV_WT_fade_112123_1200x800.png", scale = 1, width = 1200, height = 800)
-save_image(fig, file = "propCNV_WT_fade_112123_1200x800.pdf", scale = 1, width = 1200, height = 800)
+# save_image(fig, file = "propCNV_WT_fade_112123_1200x800.png", scale = 1, width = 1200, height = 800)
+# save_image(fig, file = "propCNV_WT_fade_112123_1200x800.pdf", scale = 1, width = 1200, height = 800)
 
 # add ARS KO median line and fade range
 fig = fig %>% add_trace(highars, x = highars$generation, y = highars$maxs, type = 'scatter', mode = 'lines', line = list(color = 'transparent'), showlegend = FALSE, name = "ARS maxs")
-fig = fig %>% add_trace(y=~lowars$mins, type = 'scatter', mode = 'lines', fill = 'tonexty', fillcolor = 'rgba(226, 109, 92, 0.2)',line = list(color = 'transparent'), showlegend = FALSE, name = "ARS mins") #tonexty is fills to next y (shades under y) 
+fig = fig %>% add_trace(y=~lowars$mins, type = 'scatter', mode = 'lines', fill = 'tonexty', fillcolor = 'rgba(226, 109, 92, 0.3)',line = list(color = 'transparent'), showlegend = FALSE, name = "ARS mins") #tonexty is fills to next y (shades under y) 
 fig = fig %>% add_trace(x=~medars$generation, y = ~medars$median, type = 'scatter', mode = 'lines', line = list(color='rgba(226, 109, 92, 1)',width=10), showlegend = FALSE,name = 'ARS removed')
 fig
 
@@ -98,7 +104,7 @@ fig
 # add LTR KO median line and fade range
 fig = fig %>% add_trace(high, x = high$generation, y = high$maxs, type = 'scatter', mode = 'lines', line = list(color = 'transparent'), showlegend = FALSE, name = "LTRKO max")
 fig = fig %>% add_trace(y= ~low$mins, type = 'scatter', mode = 'lines',
-                         fill = 'tonexty', fillcolor = 'rgba(203, 221, 239,0.5)', line = list(color = 'transparent'), showlegend = FALSE, name = "LTRKO Low") #BBD3EA #color='#CBDDEF', #RGBA the 4th number is the opacity! 
+                         fill = 'tonexty', fillcolor = 'rgba(203, 221, 239,0.3)', line = list(color = 'transparent'), showlegend = FALSE, name = "LTRKO Low") #BBD3EA #color='#CBDDEF', #RGBA the 4th number is the opacity! 
 fig <- fig %>% add_trace(x = medians$generation, y = medians$median, type = 'scatter', mode = 'lines',
                          line = list(color='#6699cc', width = 10),
                          showlegend = FALSE,
@@ -112,7 +118,7 @@ fig
 
 # add ALL KO median line and fade region
 fig = fig %>% add_trace(y = ~allhigh$maxs, type = 'scatter', mode = 'lines', line = list(color = 'transparent', showlegend = FALSE, name = "ALLko max"))
-fig = fig %>% add_trace(y = ~alllow$mins, type = 'scatter', mode = 'lines', fill = "tonexty", fillcolor = 'rgba(222, 189, 82, 0.3)', line = list(color='transparent'), showlegend = FALSE, name = "All KO mins")
+fig = fig %>% add_trace(y = ~alllow$mins, type = 'scatter', mode = 'lines', fill = "tonexty", fillcolor = 'rgba(222, 189, 82, 0.4)', line = list(color='transparent'), showlegend = FALSE, name = "All KO mins")
 fig = fig %>% add_trace(y = ~allMedian$median, type = 'scatter', mode = 'lines', line = list(color="#DEBD52", width = 10), showlegend = FALSE, name ="LTR and ARS removed")
 fig
 fig <- fig %>% layout(paper_bgcolor='white', plot_bgcolor='white',
@@ -149,13 +155,126 @@ fig
 #reticulate::use_miniconda('r-reticulate')
 
 #Plot with wildtype only
-save_image()
+#save_image()
 
 
 #Plot with all four genotypes
 
 # save_image(fig, file = "propCNV_full_fade_112123_1200x800.png", scale = 1, width = 1200, height = 800)
 # save_image(fig, file = "propCNV_full_fade_112123_1200x800.pdf", scale = 1, width = 1200, height = 800)
+save_image(fig, file = "propCNV_full_fade_011024_1200x800.png", scale = 1, width = 1200, height = 800)
+save_image(fig, file = "propCNV_full_fade_011024_1200x800.pdf", scale = 1, width = 1200, height = 800)
+
+######## ggplot-Graph one MAD (Median Absolute Deviation) instead of big range######
+#calculate MAD
+med_freq_counts=med_freq_counts%>%group_by(Description,generation)%>%
+         mutate(mad = mad(proportion),
+                IQR=IQR(proportion))
+#plot
+med_freq_counts%>%
+  filter(generation <= 137) %>%
+ggplot(aes(x = generation, group = Description)) +
+  geom_line(aes(y = med/100, color = Description), linewidth = 3) + 
+  geom_ribbon(aes(y = med/100, ymin = med/100 - mad, ymax = med/100 + mad, fill = Description),alpha=0.3)+
+#geom_ribbon(aes(y = med/100, ymin = med/100 - IQR, ymax = med/100 + IQR, fill = Description))
+  #geom_point(size = 2)+
+  #geom_line(size = 3)+
+  scale_color_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"),  #custom colors
+                     limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"),
+                     labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+
+  scale_fill_manual(values=c("gray6", "#6699cc", "#e26d5c", "#DEBD52"), #custom colors
+                    limits=c("GAP1 WT architecture", "GAP1 LTR KO", "GAP1 ARS KO","GAP1 LTR + ARS KO"), #second, change order of legend items, by listing in the order you want em. using the real names in the aes(color =  ) argument
+                    labels=c("Wild type architecture", "LTR removed", "ARS removed", "LTR and ARS removed"))+#third, now you can change legend labels
+#  scale_x_continuous(breaks=seq(0,200,50))+
+  scale_x_continuous(limits=c(0,125))+
+ # scale_y_continuous(limits = c(0, 1.0), breaks = seq(0, 1, by = 0.25))+
+  #scale_fill_discrete(name = "Dose", labels = c("A", "B", "C"))
+  xlab("Generation")+
+  ylab("Median proportion of cells
+with GAP1 CNV") +
+  theme_classic() +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"),
+        axis.title = element_text(size = 35),
+        text = element_text(size=25),
+        #legend.position="none",
+        legend.title = element_blank(),
+        legend.text = element_text(size=25), #change legend text font size
+        axis.text.x = element_text(size = 40, color = "black"), #edit x-tick labels
+        axis.text.y = element_text(size = 44, color = "black"))
+
+ggsave(paste0("medianPropCNV_MADfade_011124_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
+ggsave(paste0("medianPropCNV_MADfade_011124_8x16.pdf"), bg = "#FFFFFF", height = 8, width = 16)
+
+ggsave(paste0("medianPropCNV_g137_MADfade_011124_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
+ggsave(paste0("medianPropCNV_g137_MADfade_011124_8x16.pdf"), bg = "#FFFFFF", height = 8, width = 16)
+
+ggsave(paste0("medianPropCNV_g137_MADfade_Legend_011124_8x16.png"), bg = "#FFFFFF", height = 8, width = 16)
+ggsave(paste0("medianPropCNV_g137_MADfade_Legend_011124_8x16.pdf"), bg = "#FFFFFF", height = 8, width = 16)
+
+#######
+
+######## Graph all four ranges, then graph all four lines ###########
+#wildtype range
+fig = plot_ly(wtHigh, x = wtHigh$generation, y = wtHigh$maxs, type = 'scatter', mode = 'lines', line = list(color = 'transparent'), showlegend = FALSE, name = "WT maxs") %>%
+  add_trace(y=~wtLow$mins, type = 'scatter', mode = 'lines', fill = 'tonexty', fillcolor = 'darkgray',line = list(color = 'transparent'), showlegend = FALSE, name = "WT mins")#tonexty is fills to next y (shades under y)
+# ars range 
+fig = fig %>% add_trace(highars, x = highars$generation, y = highars$maxs, type = 'scatter', mode = 'lines', line = list(color = 'transparent'), showlegend = FALSE, name = "ARS maxs")
+fig = fig %>% add_trace(y=~lowars$mins, type = 'scatter', mode = 'lines', fill = 'tonexty', fillcolor = 'rgba(226, 109, 92, 0.5)',line = list(color = 'transparent'), showlegend = FALSE, name = "ARS mins") #tonexty is fills to next y (shades under y) 
+fig
+# LTR range 
+fig = fig %>% add_trace(high, x = high$generation, y = high$maxs, type = 'scatter', mode = 'lines', line = list(color = 'transparent'), showlegend = FALSE, name = "LTRKO max")
+fig = fig %>% add_trace(y= ~low$mins, type = 'scatter', mode = 'lines',
+                        fill = 'tonexty', fillcolor = 'rgba(203, 221, 239,0.7)', line = list(color = 'transparent'), showlegend = FALSE, name = "LTRKO Low") #BBD3EA #color='#CBDDEF', #RGBA the 4th number is the opacity! 
+
+# all range
+fig = fig %>% add_trace(y = ~allhigh$maxs, type = 'scatter', mode = 'lines', line = list(color = 'transparent', showlegend = FALSE, name = "ALLko max"))
+fig = fig %>% add_trace(y = ~alllow$mins, type = 'scatter', mode = 'lines', fill = "tonexty", fillcolor = 'rgba(222, 189, 82, 0.5)', line = list(color='transparent'), showlegend = FALSE, name = "All KO mins")
+fig
+
+#wtLines
+fig = fig %>% add_trace(x=wtMeds$generation, y=wtMeds$median, type = 'scatter', mode = 'lines', line = list(color = 'black', width = 10), showlegend = FALSE, name = "Wildtype architecture")%>%
+  layout(paper_bgcolor='white', plot_bgcolor='white',
+         xaxis = list(
+           title = list(text="Generation",
+                        font=list(size = 50, family="Arial", color = "black")),
+           dtick = 50, 
+           tick0 = 0, 
+           zerolinecolor = "black",
+           showgrid = TRUE,
+           showline = TRUE,
+           showticklabels = TRUE,
+           tickfont = list(size = 55, family = "Arial", color = "black"),
+           tickcolor = 'rgb(127,127,127)',
+           ticks = 'outside',
+           zeroline = TRUE),
+         yaxis = list(
+           title = list(text="Proportion of cells with GAP1 CNV",
+                        font=list(size=40, family="Arial", color = "black")),
+           dtick = 0.25,
+           tick0 = 0,
+           zerolinecolor = "black",
+           showgrid = TRUE,
+           showline = TRUE,
+           showticklabels = TRUE,
+           tickfont = list(size = 60, family="Arial",color = "black"),
+           tickcolor = 'rgb(127,127,127)',
+           ticks = 'outside',
+           zeroline = FALSE))
+fig
+
+#ltrLine
+fig <- fig %>% add_trace(x = medians$generation, y = medians$median, type = 'scatter', mode = 'lines',
+                         line = list(color='#6699cc', width = 10),
+                         showlegend = FALSE,
+                         name = 'LTR removed')
+#arsLine
+fig = fig %>% add_trace(x=~medars$generation, y = ~medars$median, type = 'scatter', mode = 'lines', line = list(color='rgba(226, 109, 92, 1)',width=10), showlegend = FALSE,name = 'ARS removed')
+#allLine
+fig = fig %>% add_trace(y = ~allMedian$median, type = 'scatter', mode = 'lines', line = list(color="#DEBD52", width = 10), showlegend = FALSE, name ="LTR and ARS removed")
+fig
+# eh its not better its worse because it separates the information 
+# save it anyway
+# save_image(fig, file = "propCNV_full_fade_011024_1200x800.png", scale = 1, width = 1200, height = 800)
 
 ######## Boxplots for populations dynamics #########
 clean_freq_and_counts = read_csv("freq_and_counts_merged_CLEAN_121622.csv")
