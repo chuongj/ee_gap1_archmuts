@@ -54,7 +54,7 @@ names(my.facet.labs) = c("Wildtype architecture", "LTR KO", "ARS KO", "LTR and A
 ###
 
 # import clone data
-all_clones = read_csv("all_clones_RD_mech_011624_edit.csv")
+all_clones = read_csv("all_clones_RD_mech_020224.csv")
 all_clones = all_clones %>% mutate_at('generation', as.factor)
 all_clones$Description <- factor(all_clones$Description, levels=c('Wildtype architecture','LTR KO','ARS KO', 'LTR and ARS KO')) #reorder
 
@@ -67,7 +67,7 @@ all_clones = all_clones %>%
   mutate(distance_start = distance_start*-1)%>%
   mutate(CNV_Mechanism4 = as_factor(if_else(grepl("ODIRA no ARS|ODIRA one end", CNV_Mechanism3), "ODIRA", CNV_Mechanism3))) %>% relocate(CNV_Mechanism4, .after = CNV_Mechanism3) 
 
-all_clones %>% write_csv("all_clones_RD_mech_020124.csv")
+#all_clones %>% write_csv("all_clones_RD_mech_020224.csv")
 
 ######## Test differences of CNV length between groups between timepoints #######
 hist(all_clones$cnv_length)
@@ -198,11 +198,12 @@ ggplot(all_clones, aes(Description, cnv_length, fill = Description))+
   scale_fill_manual(values=c('gray40', ltr_color, ars_color, all_color))+
   theme_classic()+
   theme(
+    legend.position="none",
     axis.text.x = element_blank(), #remove x-tick labels 
     axis.ticks.x=element_blank(), #remove x-ticks 
-    axis.text.y = element_text(size = 14, color = "black"),
-    axis.title.y = element_text(size = 16, vjust=2),
-    text = element_text(size=16)
+    axis.text.y = element_text(size = 18, color = "black"),
+    axis.title.y = element_text(size = 20, vjust=2),
+    text = element_text(size=20)
   )
 # ggsave("boxplot_jit_CNVlength_Log_UNgroup_011324.png",
 #        width = 6, height = 5, bg = "white")
@@ -211,6 +212,10 @@ ggplot(all_clones, aes(Description, cnv_length, fill = Description))+
 # ggsave("Violin_jit_CNVlength_Log_UNgroup_020124.png",
 #        width = 6, height = 5, bg = "white")
 # ggsave("Violin_jit_CNVlength_Log_UNgroup_020124.pdf",
+#        width = 6, height = 5, bg = "white")
+# ggsave("Violin_jit_CNVlength_NoLegend_020224.png",
+#        width = 6, height = 5, bg = "white")
+# ggsave("Violin_jit_CNVlength_NoLegend_020224.pdf",
 #        width = 6, height = 5, bg = "white")
 
 ####### One Way ANOVA - CNV length ~ Description #####
@@ -276,7 +281,12 @@ all_clones %>%
 
 
 ##### Scatterplot by Mechanism and Copy number, Facet by Description #####
-  
+db_clones = all_clones %>%
+  filter(gap1_rounded>1) %>%
+  filter(sample %in% c(2927,2929,3023, 3029, 3025, 2695, 3027, 2926,2931,3050,
+                       2924,2690,3056,2948,2945,3069,2691,2852,2983,2946,3076,
+                       3019,3022,3107,3099,3101,3093,2968)
+  )  
 all_clones %>%   
   filter(CNV_Mechanism4 %in% c("LTR NAHR", "ODIRA", "transposon-mediated", "aneuploid", "NAHR", "complex CNV"))%>% 
   mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "LTR NAHR", "NAHR", "ODIRA", "transposon-mediated", "aneuploid", "complex CNV")) %>% #custom order
@@ -290,6 +300,18 @@ all_clones %>%
                      breaks = c(0,1e3, 1e4, 1e5, 153000),
                      labels = scales::comma_format(scale = 0.001)) +
   #scale_color_manual(values = c(wt_color, ltr_color, ars_color, all_color))+
+  geom_text( data = db_clones,
+    aes(label = sample),
+    size = 3,
+    nudge_x = -.25, nudge_y = 0,
+    check_overlap = T )+
+  # geom_label(
+  #   data = all_clones %>% filter(sample %in% c(2927,2929,3023, 3029, 3025, 2695, 3027, 2926,2931,3050,
+  #                                 2924,2690,3056,2948,2945,3069,2691,2852,2983,2946,3076,
+  #                                 3019,3022,3107,3099,3101,3093,2968)
+  #   ),
+  #   aes(label=sample)
+  # ) +
   scale_color_manual(values= rev(my_palet))+
   scale_shape_manual(values=c(19, 17, 15, 8))+
   geom_hline(yintercept=1090,linetype=3)+  #dotted line for end of GAP1 CDS
@@ -308,6 +330,9 @@ all_clones %>%
 
 # ggsave("scatterplot_Mechs_CopyNum_FacetDescription_020124.png", width = 10, height = 8, bg = "white")
 # ggsave("scatterplot_Mechs_CopyNum_FacetDescription_020124.pdf", width = 10, height = 8, bg = "white")
+# ggsave("scatterplot_Mechs_CopyNum_FacetDescription_Label_020524.png", width = 12, height = 8, bg = "white")
+# ggsave("scatterplot_Mechs_CopyNum_FacetDescription_Label_020524.pdf", width = 12, height = 8, bg = "white")
+
 f=2
 
 #SUPPLEMENTARY FIGURE#### Barplot of Mechanisms by Generation ####### 
@@ -339,30 +364,94 @@ all_clones %>%
   mutate(prop = prop.table(n)) %>% 
   ungroup() %>% 
   complete(CNV_Mechanism4, Description) %>% 
-  filter(CNV_Mechanism4 %in% c("LTR NAHR", "ODIRA", "transposon-mediated", "aneuploid", "NAHR", "complex CNV"))%>% 
-  mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "NAHR", "aneuploid","transposon-mediated", "complex CNV", "LTR NAHR", "ODIRA" )) %>% #custom order
+  mutate(across('CNV_Mechanism4', str_replace, 'transposon-mediated', 'transposon mediated')) %>% 
+  filter(CNV_Mechanism4 %in% c("LTR NAHR", "ODIRA", "transposon mediated", "aneuploid", "NAHR", "complex CNV"))%>% 
+  mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "NAHR", "aneuploid","transposon mediated", "complex CNV", "LTR NAHR", "ODIRA" )) %>% #custom order
   mutate(Description = fct_relevel(Description, "LTR and ARS KO", "ARS KO", "LTR KO", "Wildtype architecture")) %>% 
   ggplot(aes(y=CNV_Mechanism4, x = n, fill = Description)) +
   geom_col(width = 0.75, position = position_dodge())+
-  scale_fill_manual(values=rev(c('gray40', ltr_color, ars_color, all_color)))+
+  scale_fill_manual(values=rev(c('gray40', ltr_color, ars_color, all_color)),
+                    guide = guide_legend(reverse = TRUE))+
   scale_x_continuous(limits = c(0, 50),
                      expand = c(0, 0),
                      position = "top"
                      )+
+  scale_y_discrete(labels = function(y) str_wrap(y, width = 5))+
   ylab("Inferred CNV mechanism")+
   xlab("Count")+
   theme_classic()+
   geom_hline(yintercept=c(0.5,1.5,2.5,3.5, 4.5, 5.5, 6.5),color="#A8BAC4",size = 0.1)+
   theme(
     panel.grid.major.x = element_line(color = "gray70", size = 0.3), #vertical grid lines
-    axis.text.x = element_text(size = 14, color = "black"),
-    axis.text.y = element_text(size = 14, color = "black"),
-    axis.title.y = element_text(size = 16),
-    text = element_text(size=16)
+    axis.text.x = element_text(size = 20, color = "black"),
+    axis.text.y = element_text(size = 20, color = "black"),
+    axis.title.y = element_text(size = 20),
+    text = element_text(size=20),
+    legend.title=element_blank()
   )
 # ggsave("HorizontalBar_cnvMechs_Genotype_020124.png", width = 8, height = 6, bg = "white")
 # ggsave("HorizontalBar_cnvMechs_Genotype_020124.pdf", width = 8, height = 6, bg = "white")
+# ggsave("HorizontalBar_cnvMechs_Genotype_020524.png", width = 10, height = 6, bg = "white")
+# ggsave("HorizontalBar_cnvMechs_Genotype_020524.pdf", width = 10, height = 6, bg = "white")
+f=1
+# SUPPLEMENTARY BARPLOT, Types of ODIRA we found ####
+all_clones %>% select(CNV_Mechanism3, gap1_rounded) %>% filter(CNV_Mechanism3 %in% c("ODIRA one end", "ODIRA", "ODIRA no ARS")) %>% arrange(gap1_rounded) %>% summarize(ODIRA_2 = sum(CNV_Mechanism3 == "ODIRA" & gap1_rounded == 2),
+            ODIRA_3 = sum(CNV_Mechanism3 == "ODIRA" & gap1_rounded == 3),
+            ODIRA_oneEnd_2 = sum(CNV_Mechanism3 == "ODIRA one end" & gap1_rounded == 2),
+            ODIRA_oneEnd_3 = sum(CNV_Mechanism3 == "ODIRA one end" & gap1_rounded == 3),
+            ODIRA_noARS_3 = sum(CNV_Mechanism3 == "ODIRA no ARS" & gap1_rounded==3)
+            ) %>% pivot_longer(cols = ODIRA_2:ODIRA_noARS_3, names_to = "ODIRA_Type", values_to = "Count") %>%
+  mutate(Proportion = Count/sum(Count)) %>% 
+  #ggplot(aes(x = reorder(ODIRA_Type, -Proportion), y=Proportion)) +
+  ggplot(aes(x = reorder(ODIRA_Type, -Count), y=Count)) +
+  ylim(0,60)+
+  geom_col(fill = "#414833")+
+  xlab("ODIRA Type")+
+  ylab("Proportion")+
+  theme_classic()
 
+ggsave(filename = "barplot_ODIRAtypes_Count.png", width = 6, height = 4, bg = "white")
+  
+
+# SUPPLEMENTARY TABLE, Count of Mechanism for each Genotype ####
+library(janitor)
+with(all_clones,table(Description, CNV_Mechanism4)) %>% as.data.frame() %>%
+#  filter(!(CNV_Mechanism4 %in% c("seq failed", "skip cuz clonal", "unresolved"))) %>%
+  pivot_wider(names_from = Description, CNV_Mechanism4, values_from = Freq) %>% 
+  mutate(total = rowSums(.[, 2:5])) %>%
+  adorn_totals("row")%>% View() #write_csv("count_Mechs_perGeno.csv")
+
+with(all_clones,table(CNV_Mechanism4, Description)) %>% as.data.frame() %>% 
+  filter(!(CNV_Mechanism4 %in% c("seq failed", "skip cuz clonal", "unresolved"))) %>%
+  group_by(Description) %>% 
+  mutate(proportion_geno = Freq/sum(Freq)) %>% ungroup() %>% 
+  mutate(across('CNV_Mechanism4', str_replace, 'transposon-mediated', 'transposon mediated')) %>% 
+  mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "NAHR", "aneuploid","transposon mediated", "complex CNV", "LTR NAHR", "ODIRA" )) %>% #custom order
+  mutate(Description = fct_relevel(Description, "LTR and ARS KO", "ARS KO", "LTR KO", "Wildtype architecture")) %>% 
+  ggplot(aes(y=CNV_Mechanism4, x = proportion_geno, fill = Description)) +
+  geom_col(width = 0.75, position = position_dodge())+
+  scale_fill_manual(values=rev(c('gray40', ltr_color, ars_color, all_color)),
+                    guide = guide_legend(reverse = TRUE))+
+  scale_x_continuous(limits = c(0, 1),
+                     expand = c(0, 0),
+                     position = "top"
+  )+
+  scale_y_discrete(labels = function(y) str_wrap(y, width = 5))+
+  ylab("Inferred CNV mechanism")+
+  xlab("Proportion")+
+  theme_classic()+
+  geom_hline(yintercept=c(0.5,1.5,2.5,3.5, 4.5, 5.5, 6.5),color="#A8BAC4",size = 0.1)+
+  theme(
+    panel.grid.major.x = element_line(color = "gray70", size = 0.3), #vertical grid lines
+    axis.text.x = element_text(size = 20, color = "black"),
+    axis.text.y = element_text(size = 20, color = "black"),
+    axis.title.y = element_text(size = 20),
+    text = element_text(size=20),
+    legend.title=element_blank()
+  )
+
+ggsave("HorizontalBarProp_cnvMechs_Genotype_020624.png", width = 10, height = 6, bg = "white")
+ggsave("HorizontalBarProp_cnvMechs_Genotype_020624.pdf", width = 10, height = 6, bg = "white")
 f=1
 #### Dumbbell Plot - Grouped by Genotype  ####
 all_clones %>%
@@ -400,6 +489,46 @@ all_clones %>%
 
 #ggsave(filename = "dumbbell_plot_020124.png", width = 8, height = 20, bg = "white")
 
+### Dumbbell plot of select clones for Fig 4  ####
+all_clones %>%
+  filter(gap1_rounded>1) %>%
+  filter(sample %in% c(2927,2929,3023, 3029, 3025, 2695, 3027, 2926,2931,3050,
+                       2924,2690,3056,2948,2945,3069,2691,2852,2983,2946,3076,
+                       3019,3022,3107,3099,3101,3093,2968)
+         ) %>% 
+  arrange(factor(Description, levels = rev(c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"))),desc(cnv_length)) %>% #reorder genotype custom order, and then arrange copy number low to high
+  mutate(clone = factor(sample, levels = unique(sample))) %>% #reorder strain order %>%
+  ggplot(aes(x = start, xend=end, y = clone, color = Description))+
+  geom_dumbbell(size=2, dot_guide=F, dot_guide_size=0.1)+
+  coord_cartesian(xlim=c(360000,670191))+
+  scale_color_manual(values = c(wt_color,ltr_color,ars_color,all_color), #custom colors
+                     limits = c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"), #second, change order of legend items, by listing in the order you want em. using the real names in the aes(color =  ) argument
+                     labels = c("Wildtype architecture","LTR removed", "ARS removed","LTR and ARS removed") #third, now you can change legend labels
+  )+
+  # scale_x_discrete(expand=c(0,1),
+  #                  labels = function(l) {trans = l / 1000},
+  #                  "Position on Chromosome XI (kb)")+ 
+  scale_x_continuous(expand=c(0,1),#limits=c(400000,670191),
+                     labels = function(l) {trans = l / 1000},"Position on Chromosome XI (kb)")+ #breaks = scales::pretty_breaks(n=4)
+  #scale_y_discrete(limits=rev)+
+  labs(x = "Position on Chromosome XI", y= "Clone") +
+  # facet_wrap(~generation) #facet by generation? 
+  theme_bw()+
+  theme(panel.background = element_rect(fill='transparent'), #transparent panel bg
+        plot.background = element_rect(fill='transparent', color=NA), #transparent plot bg
+        axis.text.x = element_text(size = 25, color = "black"),
+        axis.text.y = element_text(size = 8, color = "black"),
+        #axis.text.y= element_blank(),
+        axis.title = element_text(size = 20, color = "black"),
+        legend.title = element_text(size = 25, color = "black"),
+        legend.text=element_text(size=25, color = "black"),
+        legend.box.margin=margin(20,20,20,20), #move legend away from plot
+        legend.position = "none",
+        plot.margin = margin(25, 25, 25, 25))+
+  guides(color = guide_legend(title = "Genotype"))
+
+ggsave(filename = "dumbbell_Fig4_020224.png", width = 9, height = 4, bg = "white")
+ggsave(filename = "dumbbell_Fig4_020224.pdf", width = 9, height = 4, bg = "white")
 
 ### Make dumbbell plot VERSION 2 ####  
 # Include aneuploidy clones and zoom into 400-660kb region
@@ -408,6 +537,7 @@ all_clones %>%
 plot2 = 
   all_clones %>%
   filter(gap1_rounded>1) %>%
+  filter(!(CNV_Mechanism4 %in% c("skip cuz clonal","seq failed","unresolved"))) %>%  #Only plot clones with RESOLVED mechs
   arrange(factor(Description, levels = rev(c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"))), desc(gap1_rounded), desc(cnv_length)) %>% #reorder genotype custom order, and then arrange copy number low to high
   mutate(clone = factor(sample, levels = unique(sample))) %>% #reorder strain order %>%
   ggplot(aes(x = start, xend=end, y = clone, color = Description))+
@@ -443,10 +573,13 @@ plot2
 
 # ggsave(filename = "dumbbell_plot_ZOOM_020124_long.png", width = 8, height = 20, bg = "white")
 # ggsave(filename = "dumbbell_plot_ZOOM_020124_long.pdf", plot = plot2, width = 8, height = 20, bg = "white") 
+# ggsave(filename = "dumbbell_plot_ZOOM_Resolved_020124.png", width = 8, height = 20, bg = "white")
+# ggsave(filename = "dumbbell_plot_ZOOM_Resolved_020124.pdf", plot = plot2, width = 8, height = 20, bg = "white")
 
 ### Barplot grouped by genotype, then sort by copy number low to high ####
 bar = all_clones %>%
   filter(gap1_rounded>1)%>%
+  filter(!(CNV_Mechanism4 %in% c("skip cuz clonal","seq failed","unresolved"))) %>%  #Only plot clones with RESOLVED mechs
   arrange(factor(Description, levels = rev(c("Wildtype architecture","LTR KO","ARS KO","LTR and ARS KO"))), desc(gap1_rounded), desc(cnv_length)) %>% #reorder genotype custom order, and then arrange copy number low to high
   mutate(clone = factor(sample, levels = unique(sample))) %>% #reorders the strain order after arrange()
   ggplot(aes(clone, gap1_rounded, fill = Description)) +
@@ -479,8 +612,8 @@ both = grid.arrange(plot2, bar, ncol = 2)
 both
 # ggsave("selectClones_dumbbell_and_barplot_v4_102923.png", plot = both, width = 14, height = 9)
 # ggsave("selectClones_dumbbell_and_barplot_v4_102923.pdf", plot = both, width = 14, height = 9)
-ggsave("dumbbell_and_barplot_020124.png", plot = both, width = 16, height = 20)
-ggsave("dumbbell_and_barplot_020124.pdf", plot = both, width = 16, height = 20)
+ggsave("dumbbell_and_barplot_Resolved_020224.png", plot = both, width = 16, height = 20)
+ggsave("dumbbell_and_barplot_Resolved_020224.pdf", plot = both, width = 16, height = 20)
 
 ######## Split it up by generation ####### 
 
@@ -631,5 +764,5 @@ g79bar = all_clones %>%
 g79bar
 
 g79_both = grid.arrange(g79_plot, g79bar, ncol = 2)
-ggsave("g79_dumbbell_and_barplot_112923.pdf", plot = g79_both, width = 14, height = 12)
-ggsave("g79_dumbbell_and_barplot_112923.png", plot = g79_both, width = 14, height = 12)
+# ggsave("g79_dumbbell_and_barplot_112923.pdf", plot = g79_both, width = 14, height = 12)
+# ggsave("g79_dumbbell_and_barplot_112923.png", plot = g79_both, width = 14, height = 12)
