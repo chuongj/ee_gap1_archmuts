@@ -1,10 +1,11 @@
+# Chuong et al. 2024
 # Figure 2A
 
 # Load required packages
 library(CytoExploreR)
 library(tidyverse)
 
-setwd("~/Google Drive/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/data/FCS_by_pop")
+setwd("~/Google Drive/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/data/FCS_by_pop") 
 folders = list.dirs()[-1] #select the FSC file folders in your directory
 folder_name = folders[1] # Make sure it's gap1_1 folder
 
@@ -62,16 +63,21 @@ transformed_pop_gs <- cyto_transform(pop_gs,trans = combined_trans)
 cyto_gatingTemplate_apply(transformed_pop_gs, gatingTemplate= "cytek_gating_02_WT_112222_toSinglets.csv")
 
 #### Make Graphs in 4 plots per page ####
-start = seq(1,nrow(experiment_details), by = 5)
-end = seq(5,nrow(experiment_details), by = 5)
+start = seq(1,nrow(experiment_details), by = 4)
+end = seq(5,nrow(experiment_details), by = 4)
 
 for(i in 1:length(start)){
-  cyto_plot_save(paste0(pop_folder,"_t",start[i],"-",end[i],"_FlowPlot.pdf"),width=6,height=9) #run   cyto_plot_save(), then plot
+  cyto_plot_save(paste0(pop_folder,"_t",start[i],"-",end[i],"_FlowPlot_Purple.png"),width=7,height=9) #run   cyto_plot_save(), then plot
   cyto_plot(pop_gs[start[i]:end[i]],
             parent = "Single_cells",
             axes_limits = "data",
             ylim = c(10^3, 10^6),
             channels = c("FSC-A", "GFP"),
+            point_col_scale = rev(c(
+              "#b3cde3",
+              "#8c96c6",
+              "#8856a7",
+              "#810f7c")),
             axes_text_size = 1.5,
             axes_label_text_size = 1.5,
             )
