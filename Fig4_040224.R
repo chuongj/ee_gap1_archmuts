@@ -35,7 +35,7 @@ ltrBlues = c("#6699cc", "#005f73", "#0a9396", "#4292C6", "#2171B5", "#3799fb", "
 
 my_palet = c("#E7298A","#66A61E", "#7570B3","#D95F02","#3799fb", "#1B9E77")
 
-my.facet.labs = c("Wildtype architecture", "LTRs removed", "ARS removed", "All (LTR and ARS) removed")
+my.facet.labs = c("Wildtype", "LTR∆", "ARS∆", "ALL∆")
 names(my.facet.labs) = c("Wildtype architecture", "LTR KO", "ARS KO", "LTR and ARS KO")
 
 ####### STEP 7 - Make Dumbbell plots
@@ -356,18 +356,60 @@ ggplot(aes(x=generation, fill = CNV_Mechanism4)) +
     text = element_text(size=16)
   )
 
-#### Horizontal Barplot - CNV Mechanisms per Genotype #### 
+## Horizontal Barplot - Condensed Bins for Talk #####
 all_clones %>%
-  mutate(CNV_Mechanism4 = as_factor(if_else(grepl("ODIRA no ARS|ODIRA one end", CNV_Mechanism3), "ODIRA", CNV_Mechanism3))) %>% relocate(CNV_Mechanism4, .after = CNV_Mechanism3) %>%
   count(CNV_Mechanism4, Description) %>%
   group_by(Description) %>%   # now required with changes to dplyr::count()
   mutate(prop = prop.table(n)) %>% 
   ungroup() %>% 
   complete(CNV_Mechanism4, Description) %>% 
-  mutate(across('CNV_Mechanism4', str_replace, 'transposon-mediated', 'transposon mediated')) %>% 
-  filter(CNV_Mechanism4 %in% c("LTR NAHR", "ODIRA", "transposon mediated", "aneuploid", "NAHR", "complex CNV"))%>% 
-  mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "NAHR", "aneuploid","transposon mediated", "complex CNV", "LTR NAHR", "ODIRA" )) %>% #custom order
-  mutate(Description = fct_relevel(Description, "LTR and ARS KO", "ARS KO", "LTR KO", "Wildtype architecture")) %>% 
+  mutate(across('CNV_Mechanism4', str_replace, 'transposon-mediated', 'Transposon mediated')) %>% 
+  mutate(across('CNV_Mechanism4', str_replace, 'LTR NAHR', 'LTR Recombination')) %>% 
+  mutate(across('CNV_Mechanism4', str_replace, 'aneuploid|NAHR|complex CNV', 'Other')) %>%  
+  filter(CNV_Mechanism4 %in% c("LTR Recombination", "ODIRA", "Transposon mediated", "Other"))%>%
+  mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "Other", "Transposon mediated", "LTR Recombination", "ODIRA" )) %>% #custom order
+  mutate(Description = fct_relevel(Description, "LTR and ARS KO", "ARS KO", "LTR KO", "Wildtype architecture")) %>%   
+  ggplot(aes(y=CNV_Mechanism4, x = n, fill = Description)) +
+  geom_col(width = 0.75, position = position_dodge())+
+  scale_fill_manual(values=rev(c('gray40', ltr_color, ars_color, all_color)),
+                    guide = guide_legend(reverse = TRUE))+
+  scale_x_continuous(limits = c(0, 50),
+                     expand = c(0, 0),
+                     position = "top"
+  )+
+  scale_y_discrete(labels = function(y) str_wrap(y, width = 5))+
+  ylab("Inferred CNV mechanism")+
+  xlab("Count")+
+  theme_classic()+
+  geom_hline(yintercept=c(0.5,1.5,2.5,3.5, 4.5, 5.5, 6.5),color="#A8BAC4",size = 0.1)+
+  theme(
+    panel.grid.major.x = element_line(color = "gray70", size = 0.3), #vertical grid lines
+    axis.text.x = element_text(size = 20, color = "black"),
+    axis.text.y = element_text(size = 20, color = "black"),
+    axis.title.y = element_text(size = 20),
+    text = element_text(size=20),
+    legend.title=element_blank()
+  )
+
+# ggsave("HorizontalBar_cnvMechs_043024.png", width = 10, height = 6, bg = "white")
+# ggsave("HorizontalBar_cnvMechs_043024.pdf", width = 10, height = 6, bg = "white")
+
+#### Horizontal Barplot - CNV Mechanisms per Genotype #### 
+# all_clones %>%
+#   # mutate(CNV_Mechanism4 = as_factor(if_else(grepl("ODIRA no ARS|ODIRA one end", CNV_Mechanism3), "ODIRA", CNV_Mechanism3))) %>% relocate(CNV_Mechanism4, .after = CNV_Mechanism3) %>%
+#   # group_by(Description) %>% # now required with changes to dplyr::count()
+#   mutate(prop = prop.table()) %>% View()
+#   ungroup() %>%
+#   complete(CNV_Mechanism4, Description) %>% View()
+#   mutate(across('CNV_Mechanism4', str_replace, 'transposon-mediated', 'Transposon mediated')) %>% 
+#   filter(CNV_Mechanism4 %in% c("LTR NAHR", "ODIRA", "Transposon mediated", "aneuploid", "NAHR", "complex CNV"))%>%  
+#   mutate(across(CNV_Mechanism4, str_replace, 'LTR NAHR', 'LTR Recombination')) %>%
+#   mutate(across(CNV_Mechanism4, str_replace, 'aneuploid|NAHR|complex CNV', 'Other')) %>% 
+#   count(CNV_Mechanism4, Description) %>% 
+#   # mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "NAHR", "aneuploid","transposon mediated", "complex CNV", "LTR NAHR", "ODIRA" )) %>% #custom order
+#   # mutate(Description = fct_relevel(Description, "LTR and ARS KO", "ARS KO", "LTR KO", "Wildtype architecture")) %>% 
+#     mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "Other", "Transposon mediated", "LTR Recombination", "ODIRA" )) %>% #custom order
+#     mutate(Description = fct_relevel(Description, "LTR and ARS KO", "ARS KO", "LTR KO", "Wildtype architecture")) %>%   
   ggplot(aes(y=CNV_Mechanism4, x = n, fill = Description)) +
   geom_col(width = 0.75, position = position_dodge())+
   scale_fill_manual(values=rev(c('gray40', ltr_color, ars_color, all_color)),

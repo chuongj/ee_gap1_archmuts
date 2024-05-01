@@ -162,8 +162,8 @@ fig
 
 # save_image(fig, file = "propCNV_full_fade_112123_1200x800.png", scale = 1, width = 1200, height = 800)
 # save_image(fig, file = "propCNV_full_fade_112123_1200x800.pdf", scale = 1, width = 1200, height = 800)
-save_image(fig, file = "propCNV_full_fade_011024_1200x800.png", scale = 1, width = 1200, height = 800)
-save_image(fig, file = "propCNV_full_fade_011024_1200x800.pdf", scale = 1, width = 1200, height = 800)
+# save_image(fig, file = "propCNV_full_fade_011024_1200x800.png", scale = 1, width = 1200, height = 800)
+# save_image(fig, file = "propCNV_full_fade_011024_1200x800.pdf", scale = 1, width = 1200, height = 800)
 
 ######## ggplot-Graph one MAD (Median Absolute Deviation) instead of big range######
 #calculate MAD
