@@ -359,27 +359,29 @@ ggplot(aes(x=generation, fill = CNV_Mechanism4)) +
 ## Horizontal Barplot - Condensed Bins for Talk #####
 all_clones %>%
   count(CNV_Mechanism4, Description) %>%
-  group_by(Description) %>%   # now required with changes to dplyr::count()
+  mutate(across('CNV_Mechanism4', str_replace, 'transposon-mediated', 'Transposon mediated')) %>% 
+  mutate(across('CNV_Mechanism4', str_replace, 'LTR NAHR', 'LTR Recombination')) %>% 
+  mutate(across('CNV_Mechanism4', str_replace, 'aneuploid|NAHR|complex CNV', 'Other')) %>%
+  filter(CNV_Mechanism4 %in% c("LTR Recombination", "ODIRA", "Transposon mediated", "Other"))%>%
+  mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "Other", "Transposon mediated", "LTR Recombination", "ODIRA" )) %>% #custom order
+  mutate(Description = fct_relevel(Description, "LTR and ARS KO", "ARS KO", "LTR KO", "Wildtype architecture")) %>% 
+  group_by(Description, CNV_Mechanism4) %>% 
+  summarize(n = sum(n)) %>%
   mutate(prop = prop.table(n)) %>% 
   ungroup() %>% 
   complete(CNV_Mechanism4, Description) %>% 
-  mutate(across('CNV_Mechanism4', str_replace, 'transposon-mediated', 'Transposon mediated')) %>% 
-  mutate(across('CNV_Mechanism4', str_replace, 'LTR NAHR', 'LTR Recombination')) %>% 
-  mutate(across('CNV_Mechanism4', str_replace, 'aneuploid|NAHR|complex CNV', 'Other')) %>%  
-  filter(CNV_Mechanism4 %in% c("LTR Recombination", "ODIRA", "Transposon mediated", "Other"))%>%
-  mutate(CNV_Mechanism4 = fct_relevel(CNV_Mechanism4, "Other", "Transposon mediated", "LTR Recombination", "ODIRA" )) %>% #custom order
-  mutate(Description = fct_relevel(Description, "LTR and ARS KO", "ARS KO", "LTR KO", "Wildtype architecture")) %>%   
-  ggplot(aes(y=CNV_Mechanism4, x = n, fill = Description)) +
+  replace(is.na(.), 0) %>% 
+  ggplot(aes(y=CNV_Mechanism4, x = prop, fill = Description)) +
   geom_col(width = 0.75, position = position_dodge())+
   scale_fill_manual(values=rev(c('gray40', ltr_color, ars_color, all_color)),
                     guide = guide_legend(reverse = TRUE))+
-  scale_x_continuous(limits = c(0, 50),
+  scale_x_continuous(limits = c(0, 1),
                      expand = c(0, 0),
                      position = "top"
   )+
   scale_y_discrete(labels = function(y) str_wrap(y, width = 5))+
   ylab("Inferred CNV mechanism")+
-  xlab("Count")+
+  xlab("Relative Proportion")+
   theme_classic()+
   geom_hline(yintercept=c(0.5,1.5,2.5,3.5, 4.5, 5.5, 6.5),color="#A8BAC4",size = 0.1)+
   theme(
@@ -390,9 +392,8 @@ all_clones %>%
     text = element_text(size=20),
     legend.title=element_blank()
   )
-
-# ggsave("HorizontalBar_cnvMechs_043024.png", width = 10, height = 6, bg = "white")
-# ggsave("HorizontalBar_cnvMechs_043024.pdf", width = 10, height = 6, bg = "white")
+# ggsave("HorizontalBar_cnvMechs_051524.png", width = 10, height = 6, bg = "white")
+# ggsave("HorizontalBar_cnvMechs_051524.pdf", width = 10, height = 6, bg = "white")
 
 #### Horizontal Barplot - CNV Mechanisms per Genotype #### 
 # all_clones %>%
