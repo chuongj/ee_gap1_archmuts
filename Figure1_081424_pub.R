@@ -5,6 +5,11 @@ library(scales)
 
 setwd("/Users/juliechuong/Library/CloudStorage/GoogleDrive-jc10007@nyu.edu/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/data/testForResub")  
 
+# Read in FSC files
+
+
+
+
 #load frequency data
 freq_and_counts = read_csv("freq_and_counts_merged_CLEAN_121622.csv")
 

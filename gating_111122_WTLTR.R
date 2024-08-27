@@ -17,9 +17,6 @@ library(ggridges)
 library(docstring)
 
 # Set working directory and get list of subdirectories containing FCS files
-#setwd('/Volumes/GoogleDrive/My Drive/Gresham Lab_Papers/2021/Molecular Determinants of CNV Evolution Dynamics/Summer 2021 Group LTEE/FCS files') #David's working directory
-#setwd('G:/.shortcut-targets-by-id/1Bioj1YP_I7P8tqgmg4Zbt4EAfhb7J-0w/Molecular Determinants of CNV Evolution Dynamics/Summer 2021 Group LTEE/FCS files') #Titir's working directory
-#setwd("/Volumes/GoogleDrive/My Drive/greshamlab/Molecular Determinants of CNV Evolution Dynamics/Summer 2021 Group LTEE/FCS files") #Julie's WD
 setwd("/Volumes/GoogleDrive/My Drive/greshamlab/projects/EE_GAP1_ArchMuts_Summer2021/data/Summer_LTEE_2021_FCS_files")  #Julie's WD
 
 #In addition to having  directories containing data FSC files, make a gating directory, which is a directory that contains ALL the FSC files you want to overlay for drawing gates.
@@ -146,17 +143,17 @@ cyto_gate_draw(transformed_timepoint_gating_set,
 )
 
 #STEP 4:  Generate single cell data tables and normalized fluorescence (optional)
-#Author: Julie
-# prefix <- folders[1]
-# timepoint_raw_list <- cyto_extract(transformed_timepoint_gating_set, parent = "Single_cells", raw = TRUE, channels = c("FSC-A", "B2-A")) #raw flow data of each single cell as a list of matrices
-#
-# map_df(timepoint_raw_list, ~as.data.frame(.x), .id="name") %>% #convert to df, put list name in new column
-#   mutate(name = as.factor(name)) %>% #convert `name` to factor
-#   left_join(experiment_details %>% #join by name column to add metadata
-#   #mutate(generation = as.factor(unique(experiment_details$generation)))) %>%
-#   mutate(generation = as.factor(experiment_details$generation))) %>%
-#   mutate(B2A_FSC = `B2-A`/`FSC-A`) %>% #compute normalized fluor
-#   write_csv(paste0(version_name,"_SingleCellDistributions_",prefix,".csv"))
+# Author: Julie
+prefix <- folders[1]
+timepoint_raw_list <- cyto_extract(transformed_timepoint_gating_set, parent = "Single_cells", raw = TRUE, channels = c("FSC-A", "B2-A")) #raw flow data of each single cell as a list of matrices
+
+map_df(timepoint_raw_list, ~as.data.frame(.x), .id="name") %>% #convert to df, put list name in new column
+  mutate(name = as.factor(name)) %>% #convert `name` to factor
+  left_join(experiment_details %>% #join by name column to add metadata
+  #mutate(generation = as.factor(unique(experiment_details$generation)))) %>%
+  mutate(generation = as.factor(experiment_details$generation))) %>%
+  mutate(B2A_FSC = `B2-A`/`FSC-A`) %>% #compute normalized fluor
+  write_csv(paste0(version_name,"_SingleCellDistributions_",prefix,".csv"))
 
 #STEP 5:  Use function to perform analysis
 #A function that will
@@ -225,14 +222,14 @@ analyze_all_exp = function(folder_name, my_markers, gating_template="cytek_gatin
     write_csv(paste0(version_name,"_freq_",prefix,".csv"))
 
   #get single cell fluorescence normalized over cell size
-#   timepoint_raw_list <- cyto_extract(transformed_timepoint_gating_set, parent = "Single_cells", raw = TRUE, channels = c("FSC-A", "B2-A")) #raw flow data of each single cell as a list of matrices
-#
-#   map_df(timepoint_raw_list, ~as.data.frame(.x), .id="name") %>% #convert to df, put list name in new column
-#     mutate(name = as.factor(name)) %>% #convert `name` to factor
-#     left_join(experiment_details %>% #join by name column to add metadata
-#                 mutate(generation = as.factor(unique(experiment_details$generation)))) %>%
-#     mutate(B2A_FSC = `B2-A`/`FSC-A`) %>% #compute normalized fluor
-#     write_csv(paste0(version_name,"_SingleCellDistributions_",prefix,".csv"))
+  timepoint_raw_list <- cyto_extract(transformed_timepoint_gating_set, parent = "Single_cells", raw = TRUE, channels = c("FSC-A", "B2-A")) #raw flow data of each single cell as a list of matrices
+
+  map_df(timepoint_raw_list, ~as.data.frame(.x), .id="name") %>% #convert to df, put list name in new column
+    mutate(name = as.factor(name)) %>% #convert `name` to factor
+    left_join(experiment_details %>% #join by name column to add metadata
+                mutate(generation = as.factor(unique(experiment_details$generation)))) %>%
+    mutate(B2A_FSC = `B2-A`/`FSC-A`) %>% #compute normalized fluor
+    write_csv(paste0(version_name,"_SingleCellDistributions_",prefix,".csv"))
  }
 
 #STEP 6:  Apply function from STEP 5 to all subdirectories
@@ -255,10 +252,10 @@ list.files(path = ".", pattern = paste0(version_name,"_freq_([0-9])+_EE_GAP1_Arc
   write_csv(file = paste0(version_name,"_freq_all_timepoints.csv"))
 
 ## Do on hpc because large files, do once. Don't even try to run this command on your laptop. 12GB file.
-# list.files(path = ".", pattern = paste0(version_name,"_SingleCellDistributions")) %>%
-#   read_csv() %>%
-#   mutate(gating_template = paste0("cytek_gating_",version_name,".csv")) %>%
-#   write_csv(file = paste0(version_name,"_SingleCellDistributions_all_timepoints.csv"))
+list.files(path = ".", pattern = paste0(version_name,"_SingleCellDistributions")) %>%
+  read_csv() %>%
+  mutate(gating_template = paste0("cytek_gating_",version_name,".csv")) %>%
+  write_csv(file = paste0(version_name,"_SingleCellDistributions_all_timepoints.csv"))
 
 #STEP 8: Plot cells in gates ridgeplots, time series, & assess gates
 #Determine whether =>83% of controls are in the correct gate
@@ -641,38 +638,43 @@ make_ridgeplots = function(file_name){
   pop_name = sub("sc_distributions_", "", sub("_all_timepoints.csv","", file_name))
 
   pop_data = read.csv(file_name, stringsAsFactors = T) %>%
+    filter(generation < 140) %>% 
     mutate(generation = factor(generation, levels = unique(generation)))
 
   lowcell = count(pop_data, generation, sample) %>% filter(n < 70000)
 
   pop_data %>%
     anti_join(lowcell) %>%
-    ggplot(aes(x = B2A_FSC, y = generation, fill = ..x.., height=..density..)) +
+    ggplot(aes(x = B2A_FSC, y = generation, fill = after_stat(x), height=..density..)) +
     geom_density_ridges_gradient(scale = 2.0, rel_min_height = 0.01) +
-    xlab("Normalized fluorescence (a.u.)") +
+    xlab("Cell-size normalized fluorescence (a.u.)") +
     ylab("Generation") +
     ggtitle(paste0(pop_name)) +
     theme_classic() +
-    scale_x_continuous(limits=c(0.0,3), breaks = c(0, 1, 2, 3.0)) +
-    scale_y_discrete(expand = expansion(add = c(0.2, 2.5))) + #expands the graph space or else the top is cut off
-    scale_fill_distiller(type = "seq", palette = 5, direction = 1, guide = "colourbar") + #makes it green
+    #scale_x_continuous(limits=c(0.0,3), breaks = c(0, 1, 2, 3.0)) +
+    scale_x_continuous(limits=c(1.25,3.0), breaks = c(1.25, 1.5, 2, 3.0)) +
+    scale_y_discrete(expand = expansion(add = c(0.2, 2.0))) + #expands the graph space or else the top is cut off
+    scale_fill_distiller(type = "seq", palette = "Greens", direction = 1, guide = "colourbar") + #makes it green
     theme(
       legend.position = 'none', #remove the legend
-      axis.text.x = element_text(family="Arial", size = 10, color = "black"), #edit x-tick labels
-      axis.text.y = element_text(family="Arial", size = 10, color = "black")
+      axis.text.x = element_text(family="Arial", size = 14, color = "black"), #edit x-tick labels
+      axis.text.y = element_text(family="Arial", size = 14, color = "black"),
+      axis.title=element_text(size=16)
     )
-  ggsave(paste0(pop_name,"_ridgeplot_scale2.png"))
+  ggsave(paste0(pop_name,"_ridgeplot_scale2_082724.png"))
 }
 
 map(pop_files, make_ridgeplots) #map() applies this ridgeplot function to all 32 population.csv files
 
+make_ridgeplots()
+
 ### on HPC: For Loop - for each sample, subset it and write a sc_distributions_SampleName_allTimepoints.csv
-#for(pop in unique(sc_distr_alltimepoints$sample)) {
-#  print(pop)
-#  sc_distr_alltimepoints %>%
-#  filter(sample == pop) %>%
-#  write_csv(paste0("sc_distributions_",pop,"_all_timepoints.csv"))
-#}
+for(pop in unique(sc_distr_alltimepoints$sample)) {
+ print(pop)
+ sc_distr_alltimepoints %>%
+ filter(sample == pop) %>%
+ write_csv(paste0("sc_distributions_",pop,"_all_timepoints.csv"))
+}
 
 
 
